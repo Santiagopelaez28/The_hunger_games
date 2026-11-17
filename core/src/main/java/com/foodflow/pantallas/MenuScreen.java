@@ -39,10 +39,10 @@ public class MenuScreen extends PantallaBase {
         for (int i = 0; i < clientes.length; i++) {
             Dibujos.cliente(p, 720 + i * 85, 490, 20, clientes[i], i == 1 ? 0.4f : 1f);
         }
-        p.textoCentrado("FOODFLOW", 520, 520, 0xFFD166, 3.2f);
+        p.textoCentrado("FOODFLOW", 480, 480, 0xFFD166, 3.2f);
         p.textoCentrado("Atiende a tus clientes antes de que se cansen de esperar", 480, 410, 0xFFFFFF, 1f);
 
-        p.textoCentrado("TIENDA: entre dias compra ingredientes nuevos para pedidos mas variados.", 480, 220, 0x8EE39B, 0.95f);
+        p.textoCentrado("TIENDA: entre dias compra ingredientes nuevos para pedidos mas variados.", 480, 290, 0x8EE39B, 0.95f);
 
         p.textoCentrado("Mouse: click en los botones   |   Teclado: ESPACIO atender/entregar,", 480, 160, 0xB9BED0, 0.85f);
         p.textoCentrado("RETROCESO deshacer, 1-9 y 0 ingredientes, P pausa", 480, 138, 0xB9BED0, 0.85f);

@@ -95,7 +95,7 @@ public class Mundo {
 
     private void recibirCliente() {
         if (cola.size() >= CAPACIDAD_COLA) {
-            perderCliente("La cola esta llena: un cliente se fue");
+            perderCliente("Local lleno: un cliente se fue");
         } else {
             cola.offer(new Cliente(siguienteNumero++, generarReceta(), paciencia(), Aspecto.aleatorio(rnd)));
         }
@@ -108,7 +108,7 @@ public class Mundo {
         if (estado != Estado.JUGANDO) return false;
         if (enAtencion != null) { avisar("Termina primero el pedido actual"); return false; }
         Cliente c = cola.poll();
-        if (c == null) { avisar("No hay clientes en la cola"); return false; }
+        if (c == null) { avisar("No hay clientes esperando"); return false; }
         enAtencion = c;
         plato.clear();
         return true;

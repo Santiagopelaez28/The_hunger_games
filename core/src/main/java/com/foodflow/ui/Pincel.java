@@ -63,6 +63,33 @@ public class Pincel implements Disposable {
         batch.draw(blanco, x, y, w, h);
     }
 
+    public void elipse(float cx, float cy, float rx, float ry, int rgb) {
+        color(rgb, 1f);
+        batch.setColor(tmp);
+        float dw = rx * 2f * 32f / 30f, dh = ry * 2f * 32f / 30f;
+        batch.draw(circulo, cx - dw / 2f, cy - dh / 2f, dw, dh);
+    }
+
+    /**
+     * Dibuja la imagen cubriendo el rectángulo (x, y, w, h) sin deformarla; lo que sobra se recorta.
+     * fx y fy (0 a 1) eligen qué parte se ve cuando sobra: 0 = arriba/izquierda, 1 = abajo/derecha.
+     * Si la textura es null (no se pudo cargar), pinta el color de respaldo.
+     */
+    public void imagenCubriendo(Texture t, float x, float y, float w, float h, float fx, float fy, int rgbRespaldo) {
+        if (t == null) {
+            rect(x, y, w, h, rgbRespaldo);
+            return;
+        }
+        int tw = t.getWidth(), th = t.getHeight();
+        float escala = Math.max(w / tw, h / th);
+        int sw = Math.min(tw, Math.round(w / escala));
+        int sh = Math.min(th, Math.round(h / escala));
+        int sx = Math.round(fx * (tw - sw));
+        int sy = Math.round(fy * (th - sh));
+        batch.setColor(1f, 1f, 1f, alfaGlobal);
+        batch.draw(t, x, y, w, h, sx, sy, sw, sh, false, false);
+    }
+
     public void circulo(float cx, float cy, float radio, int rgb) {
         color(rgb, 1f);
         batch.setColor(tmp);

@@ -21,6 +21,9 @@ public class JuegoScreen extends PantallaBase {
     private static final float AY = 26, AH = 44, AW = 200;
     private static final float ATENDER_X = 30, DESHACER_X = 250, ENTREGAR_X = 470;
 
+    // Parte del cielo que se ve detrás de los clientes (0 = franja de arriba, donde está la nube grande)
+    private static final float RECORTE_CIELO = 0.04f;
+
     private boolean pausado = false;
 
     public JuegoScreen(FoodFlowGame juego) { super(juego); }
@@ -88,6 +91,12 @@ public class JuegoScreen extends PantallaBase {
 
         empezarFrame();
 
+        // Fondos: cielo con nubes detrás de los clientes y madera en el mostrador
+        p.imagenCubriendo(juego.nubes, 0, 424, 960, 136, 0.5f, RECORTE_CIELO, 0x8EDBF9);
+        p.imagenCubriendo(juego.madera, 0, 205, 960, 219, 0.5f, 0f, 0xD9A441);
+        p.rect(0, 419, 960, 6, 0x6B4A1E);   // borde del mostrador
+        p.rect(0, 205, 960, 4, 0x4A3212);   // sombra de abajo
+
         // HUD
         p.rect(0, 560, 960, 40, 0x1B1D26);
         p.texto("Dia " + m.getDia(), 20, 588, 0xFFFFFF);
@@ -99,23 +108,28 @@ public class JuegoScreen extends PantallaBase {
             p.texto("Atiende a los ultimos clientes", 480, 588, 0x8EE39B);
         }
 
-        // Cola (FIFO): el primero tiene borde dorado
-        p.texto("Clientes: " + cola.size() + "/" + Mundo.CAPACIDAD_COLA,
-                30, 552, 0xB9BED0, 0.9f);
+        // Clientes en orden de llegada: el primero (el que se atiende) tiene borde dorado y la etiqueta SIGUIENTE
         for (int i = 0; i < Mundo.CAPACIDAD_COLA; i++) {
             float x = 30 + i * 150, y = 430;
-            if (i == 0 && !cola.isEmpty()) p.rect(x - 3, y - 3, 141, 101, 0xFFD166);
-            p.rect(x, y, 135, 95, 0x262936);
+            p.rect(x, y, 135, 95, 0xFFFFFF, 0.25f);
+            if (i == 0 && !cola.isEmpty()) {
+                p.rect(x - 3, y + 95, 141, 3, 0xFFD166);
+                p.rect(x - 3, y - 3, 141, 3, 0xFFD166);
+                p.rect(x - 3, y - 3, 3, 101, 0xFFD166);
+                p.rect(x + 135, y - 3, 3, 101, 0xFFD166);
+                p.rect(x - 3, y + 98, 72, 15, 0xFFD166);
+                p.textoCentrado("SIGUIENTE", x + 33, y + 105.5f, 0x1B1D26, 0.6f);
+            }
             if (i < cola.size()) {
                 Cliente c = cola.get(i);
                 Dibujos.cliente(p, x + 67, y + 62, 17, c.getAspecto(), c.fraccionPaciencia());
-                p.texto("#" + c.getNumero(), x + 6, y + 91, 0xB9BED0, 0.7f);
+                p.texto("#" + c.getNumero(), x + 6, y + 91, 0x2B4A6B, 0.7f);
                 barra(p, x + 10, y + 6, 115, 6, c.fraccionPaciencia());
             }
         }
 
         // Mostrador: el cliente en atencion y la hamburguesa que pidio
-        p.rect(30, 215, 440, 200, 0x262936);
+        p.rect(30, 215, 440, 200, 0x2B1B0E, 0.55f);
         if (actual == null) {
             p.textoCentrado("Nadie en el mostrador", 250, 340, 0x9AA0B4, 1f);
             p.textoCentrado("Pulsa ATENDER (ESPACIO)", 250, 305, 0xFFD166, 1f);
@@ -144,21 +158,23 @@ public class JuegoScreen extends PantallaBase {
             }
         }
 
-        // Plato (pila LIFO): se ve la hamburguesa y, a la derecha, la lista de arriba hacia abajo
-        p.texto("PLATO: " + plato.size() + "/" + Mundo.MAX_PLATO, 800, 405, 0xB9BED0, 0.9f);
-        p.rect(555, 222, 230, 10, 0xE8E8E8);
-        Dibujos.hamburguesa(p, 670, 232, 190, 185, plato);
+        // Plato: se ve la hamburguesa y, a la derecha, la lista de arriba hacia abajo
+        p.rect(545, 215, 390, 200, 0x2B1B0E, 0.55f);
+        p.texto("PLATO " + plato.size() + "/" + Mundo.MAX_PLATO, 797, 402, 0xFFFFFF, 0.9f);
+        p.elipse(670, 228, 118, 14, 0xE9E9EE);
+        p.elipse(670, 230, 96, 9, 0xCFCFD8);
+        Dibujos.hamburguesa(p, 670, 232, 190, 175, plato);
         if (plato.isEmpty() && actual != null) {
-            p.textoCentrado("Plato vacio: agrega ingredientes", 670, 300, 0x6B7089, 0.9f);
+            p.textoCentrado("Plato vacio: agrega ingredientes", 670, 300, 0x9AA0B4, 0.9f);
         }
         for (int j = plato.size() - 1, fila = 0; j >= 0; j--, fila++) {
             boolean tope = j == plato.size() - 1;
-            p.texto(plato.get(j).getNombre() + (tope ? " (tope)" : ""), 795, 388 - fila * 17,
+            p.texto(plato.get(j).getNombre() + (tope ? " (tope)" : ""), 797, 378 - fila * 17,
                     tope ? 0xFFD166 : 0xB9BED0, 0.8f);
         }
 
         // Mensaje de eventos
-        if (!m.getMensaje().isEmpty()) p.textoCentrado(m.getMensaje(), 480, 200, 0xFFD166, 1f);
+        if (!m.getMensaje().isEmpty()) p.textoCentrado(m.getMensaje(), 480, 194, 0xFFD166, 1f);
 
         // Ingredientes disponibles (arreglo dinamico): un boton con icono por cada uno
         boolean puedeAgregar = actual != null && plato.size() < Mundo.MAX_PLATO;

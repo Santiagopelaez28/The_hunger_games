@@ -40,6 +40,15 @@ Son las mismas estructuras de `java.util` que usaba el proyecto original.
 - `Mundo.java`: constantes de dificultad (`CAPACIDAD_COLA`, `DURACION_DIA`, `intervaloLlegada()`, `paciencia()`).
 - `Catalogo.java`: ingredientes, precios y colores.
 
+## Imágenes (carpeta `assets/`)
+
+- `nubes.jpg`: cielo que se ve detrás de los clientes.
+- `madera.jpg`: fondo del mostrador.
+
+Para cambiarlas, reemplaza el archivo con el mismo nombre (en minúsculas) o edita los nombres en `FoodFlowGame.create()`.
+Se ajustan al área sin deformarse; `RECORTE_CIELO` en `JuegoScreen` elige qué parte del cielo se ve (0 a 1).
+Si una imagen falta, el juego usa un color liso y sigue funcionando.
+
 ## Notas
 
 - Los textos en pantalla van sin tildes ni eñe porque la fuente que trae LibGDX no garantiza esos caracteres.
