@@ -1,0 +1,22 @@
+import org.gradle.internal.os.OperatingSystem
+
+plugins {
+    id 'application'
+}
+
+application {
+    mainClass = 'com.foodflow.lwjgl3.Lwjgl3Launcher'
+}
+
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+}
+
+tasks.named('run') {
+    workingDir = rootProject.file('assets')
+    if (OperatingSystem.current().isMacOsX()) {
+        jvmArgs '-XstartOnFirstThread'   // LibGDX en macOS lo necesita
+    }
+}
