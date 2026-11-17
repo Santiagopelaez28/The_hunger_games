@@ -1,6 +1,6 @@
-# FoodFlow (juego en LibGDX)
+# The hunger games
 
-Versión en videojuego de FoodFlow. Atiendes clientes que llegan a una cola, armas cada pedido apilando
+Atiendes clientes que llegan a una cola, armas cada pedido apilando
 ingredientes y compras ingredientes nuevos entre un día y otro.
 
 ## Cómo ejecutarlo
