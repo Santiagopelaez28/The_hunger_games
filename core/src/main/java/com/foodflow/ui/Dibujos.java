@@ -12,7 +12,13 @@ import java.util.List;
  */
 public final class Dibujos {
     private static final float ANCHO_NOMINAL = 190f;
-    private static final int OSCURO = 0x1B1D26;
+    public static final int OSCURO = 0x1B1D26;
+    public static final int CREMA = 0xFFF3D6;
+    public static final int DORADO = 0xF2B33D;
+    public static final int ROJO = 0xE5484D;
+    public static final int VERDE = 0x6BD66B;
+    public static final int CIELO = 0x8EDBF9;
+    public static final int MADERA = 0x6B4A1E;
 
     private Dibujos() { }
 
@@ -52,10 +58,91 @@ public final class Dibujos {
         }
     }
 
-    /** Icono pequeño de un ingrediente (una sola capa), centrado en (cx, cy). */
+    /** Icono de un ingrediente (silueta propia, no una capa de hamburguesa), centrado en (cx, cy). */
     public static void icono(Pincel p, Ingrediente ing, float cx, float cy, float ancho) {
-        float h = ancho * (ing == Catalogo.PAN ? 0.42f : 0.30f);
-        capa(p, ing, false, false, cx, cy - h / 2f, ancho, h);
+        float w = ancho, h = ancho * 0.86f;
+        float x = cx - w / 2f, y = cy - h / 2f;
+
+        if (ing == Catalogo.PAN) {
+            cupula(p, cx, y + h * 0.17f, w * 0.92f, h * 0.72f, 0xD9A441);
+            pildora(p, x + w * 0.06f, y + h * 0.03f, w * 0.88f, h * 0.24f, 0xC98C35);
+            for (int k = -2; k <= 2; k++) {
+                p.circulo(cx + k * w * 0.17f, y + h * 0.58f - Math.abs(k) * h * 0.045f,
+                        Math.max(1f, w * 0.035f), 0xFFF1C9);
+            }
+        } else if (ing == Catalogo.CARNE) {
+            pildora(p, x + w * 0.03f, y + h * 0.15f, w * 0.94f, h * 0.60f, 0x6B3322);
+            p.rect(x + w * 0.15f, y + h * 0.60f, w * 0.70f, h * 0.10f, 0x8A4A33, 0.9f);
+            for (int k = 0; k < 3; k++) {
+                p.rectRotado(x + w * 0.29f + k * w * 0.21f, cy, w * 0.05f, h * 0.44f,
+                        18f, 0x3F1D12, 0.9f);
+            }
+        } else if (ing == Catalogo.QUESO) {
+            int n = 10;
+            for (int i = 0; i < n; i++) {
+                float t = (i + 0.5f) / n;
+                float ww = w * (1f - t) * 0.86f;
+                p.rect(cx - ww / 2f, y + h * 0.05f + i * (h * 0.84f / n), ww,
+                        h * 0.84f / n + 0.8f, i % 2 == 0 ? 0xF5D142 : 0xEAC43A);
+            }
+            p.circulo(cx - w * 0.12f, y + h * 0.30f, w * 0.055f, 0xD9B22F);
+            p.circulo(cx + w * 0.10f, y + h * 0.45f, w * 0.045f, 0xD9B22F);
+            p.circulo(cx - w * 0.03f, y + h * 0.20f, w * 0.040f, 0xD9B22F);
+        } else if (ing == Catalogo.LECHUGA) {
+            p.circulo(cx, cy, w * 0.40f, 0x2F7A36);
+            p.circulo(cx - w * 0.16f, cy + h * 0.05f, w * 0.27f, 0x6BD66B);
+            p.circulo(cx + w * 0.17f, cy + h * 0.02f, w * 0.26f, 0x4CAF50);
+            p.circulo(cx, cy + h * 0.19f, w * 0.22f, 0x8FE39A);
+            p.circulo(cx + w * 0.02f, cy - h * 0.10f, w * 0.14f, 0x3F9B46);
+        } else if (ing == Catalogo.TOMATE) {
+            p.circulo(cx, cy - h * 0.10f, w * 0.40f, 0xE5484D);
+            p.circulo(cx - w * 0.12f, cy + h * 0.03f, w * 0.10f, 0xFF7A7A, 0.55f);
+            p.elipse(cx, y + h * 0.87f, w * 0.10f, h * 0.05f, 0x3F9B46);
+            p.elipse(cx - w * 0.11f, y + h * 0.82f, w * 0.10f, h * 0.045f, 0x4CAF50);
+            p.elipse(cx + w * 0.11f, y + h * 0.82f, w * 0.10f, h * 0.045f, 0x4CAF50);
+            p.rect(cx - w * 0.012f, y + h * 0.82f, w * 0.024f, h * 0.15f, 0x2F7A36);
+        } else if (ing == Catalogo.CEBOLLA) {
+            p.circulo(cx, cy - h * 0.05f, w * 0.38f, 0xC9A0DC);
+            p.circulo(cx, cy - h * 0.05f, w * 0.30f, 0xDCBDE9);
+            for (int k = -1; k <= 1; k++) {
+                p.rect(cx + k * w * 0.12f - w * 0.015f, cy - h * 0.30f, w * 0.03f,
+                        h * 0.52f, 0xB78AD0, 0.85f);
+            }
+            p.rectRotado(cx, y + h * 0.88f, w * 0.06f, h * 0.22f, 18f, 0x4CAF50, 1f);
+            p.rectRotado(cx - w * 0.07f, y + h * 0.86f, w * 0.06f, h * 0.19f, -20f, 0x6BD66B, 1f);
+        } else if (ing == Catalogo.HUEVO) {
+            p.elipse(cx, cy - h * 0.05f, w * 0.48f, h * 0.38f, 0xF7F3EA);
+            p.elipse(cx - w * 0.17f, cy + h * 0.14f, w * 0.28f, h * 0.22f, 0xFDFBF5);
+            p.circulo(cx + w * 0.06f, cy - h * 0.02f, w * 0.21f, 0xFFB703);
+            p.circulo(cx + w * 0.01f, cy + h * 0.04f, w * 0.08f, 0xFFE08A, 0.9f);
+        } else if (ing == Catalogo.TOCINETA) {
+            for (int i = 0; i < 2; i++) {
+                float sy = i == 0 ? cy + h * 0.11f : cy - h * 0.17f;
+                pildora(p, x + w * 0.05f, sy - h * 0.10f, w * 0.90f, h * 0.22f,
+                        i == 0 ? 0xE07A5F : 0xD06A50);
+                for (int k = 0; k < 3; k++) {
+                    p.rect(x + w * 0.24f + k * w * 0.22f, sy - h * 0.10f, w * 0.075f,
+                            h * 0.22f, 0xB5452F, 0.85f);
+                }
+            }
+        } else if (ing == Catalogo.PINA) {
+            p.elipse(cx, cy - h * 0.10f, w * 0.34f, h * 0.38f, 0xFFB84D);
+            for (int fila = -1; fila <= 1; fila++) {
+                for (int col = -1; col <= 1; col++) {
+                    p.circulo(cx + col * w * 0.16f, cy - h * 0.10f + fila * h * 0.19f,
+                            w * 0.035f, 0xD98E2B, 0.85f);
+                }
+            }
+            for (int k = -2; k <= 2; k++) {
+                p.rectRotado(cx + k * w * 0.09f, cy + h * 0.36f, w * 0.07f, h * 0.28f,
+                        k * 18f, k % 2 == 0 ? 0x4CAF50 : 0x3F9B46, 1f);
+            }
+        } else {   // aguacate
+            p.elipse(cx, cy, w * 0.38f, h * 0.46f, 0x3F6B2A);
+            p.elipse(cx, cy - h * 0.02f, w * 0.30f, h * 0.38f, 0xA9D38B);
+            p.circulo(cx, cy - h * 0.14f, w * 0.13f, 0x6B4226);
+            p.circulo(cx - w * 0.02f, cy + h * 0.12f, w * 0.09f, 0xB9DDA0, 0.6f);
+        }
     }
 
     private static void capa(Pincel p, Ingrediente ing, boolean base, boolean goteo, float cx, float y, float w, float h) {
@@ -149,12 +236,121 @@ public final class Dibujos {
     /** Botón con el icono del ingrediente a la izquierda. 'tecla' puede ser null. */
     public static void botonIngrediente(Pincel p, String texto, float x, float y, float w, float h,
                                         Ingrediente ing, boolean activo, String tecla) {
-        p.setAlfa(activo ? 1f : 0.4f);
-        p.rect(x, y, w, h, 0x343849);
-        icono(p, ing, x + h * 0.72f, y + h / 2f, h * 0.9f);
-        p.textoCentrado(texto, x + (h * 1.45f + w) / 2f, y + h / 2f, 0xFFFFFF, 0.9f);
-        if (tecla != null) p.texto(tecla, x + 4, y + h - 3, 0xB9BED0, 0.6f);
+        boolean hover = activo && p.ratonDentro(x, y, w, h);
+        float dy = hover ? 2f : 0f;
+        float alfa = activo ? 1f : 0.45f;
+
+        p.redondeado(x, y - 4f + dy, w, h, 11f, 0x05060A, 0.45f * alfa);
+        p.redondeado(x, y + dy - 1f, w, h + 2f, 12f, 0x171A26, alfa);
+        p.redondeado(x, y + dy, w, h, 11f, hover ? 0x454C66 : 0x373C51, alfa);
+        p.redondeado(x + 3f, y + dy + h * 0.48f, w - 6f, h * 0.45f, 8f, 0xFFFFFF,
+                (hover ? 0.14f : 0.07f) * alfa);
+        p.redondeado(x + 3f, y + dy + 2f, w - 6f, h * 0.26f, 8f, 0x0B0D15, 0.22f * alfa);
+        p.rect(x + 11f, y + dy + h - 2f, Math.max(0f, w - 22f), 1.2f, 0xFFFFFF, 0.18f * alfa);
+
+        p.circulo(x + 24f, y + dy + h / 2f, 16f, 0x20232F, alfa);
+        p.circulo(x + 24f, y + dy + h / 2f, 14f, ing.getColor(), 0.20f * alfa);
+        p.setAlfa(alfa);
+        icono(p, ing, x + 24f, y + dy + h / 2f, 29f);
         p.setAlfa(1f);
+
+        p.textoCentrado(texto, x + (w + 48f) / 2f, y + dy + h / 2f - 0.5f, 0xFFFFFF, 0.85f, alfa);
+        if (tecla != null) {
+            p.redondeado(x + w - 18f, y + dy + 3f, 14f, 11f, 3f, 0x11131B, 0.9f * alfa);
+            p.textoCentrado(tecla, x + w - 11f, y + dy + 8.5f, 0xD8DCEA, 0.52f, alfa);
+        }
+    }
+
+    // =====================================================================  ICONOS DE INTERFAZ
+
+    /** Barra de progreso redondeada con brillo. */
+    public static void barra(Pincel p, float x, float y, float w, float h, float fraccion) {
+        float f = Math.max(0f, Math.min(1f, fraccion));
+        float r = h / 2f;
+        p.redondeado(x, y, w, h, r, 0x161821, 0.85f);
+        p.redondeado(x + 1f, y + 1f, w - 2f, h - 2f, Math.max(1f, r - 1f), 0x2E3142, 0.95f);
+        if (f <= 0.002f) return;
+        int color = f > 0.5f ? 0x6BD66B : f > 0.25f ? 0xF2C230 : 0xFF6B6B;
+        float fw = Math.min(w - 2f, Math.max(h - 2f, (w - 2f) * f));
+        p.redondeado(x + 1f, y + 1f, fw, h - 2f, Math.max(1f, r - 1f), color, 1f);
+        p.redondeado(x + 3f, y + h * 0.45f, Math.max(1f, fw - 5f), Math.max(1f, h * 0.28f),
+                Math.max(1f, h * 0.12f), 0xFFFFFF, 0.28f);
+    }
+
+    public static void moneda(Pincel p, float cx, float cy, float r) {
+        p.circulo(cx, cy + 1.6f, r, 0x7A5200, 0.85f);
+        p.circulo(cx, cy, r, 0xFFC94A);
+        p.circulo(cx, cy, r * 0.72f, 0xFFE7A3);
+        p.circulo(cx - r * 0.22f, cy + r * 0.26f, r * 0.20f, 0xFFFFFF, 0.9f);
+        p.rect(cx - r * 0.09f, cy - r * 0.42f, r * 0.18f, r * 0.84f, 0xC08A12, 0.9f);
+    }
+
+    /** Calendario pequeno; 'fondo' debe ser el color de la tarjeta donde se dibuja. */
+    public static void calendario(Pincel p, float cx, float cy, float s, int rgb, int fondo) {
+        p.redondeado(cx - s * 0.55f, cy - s * 0.50f, s * 1.10f, s * 1.00f, s * 0.14f, rgb, 1f);
+        p.redondeado(cx - s * 0.42f, cy - s * 0.40f, s * 0.84f, s * 0.74f, s * 0.08f, fondo, 1f);
+        p.rect(cx - s * 0.42f, cy + s * 0.23f, s * 0.84f, s * 0.11f, rgb, 1f);
+        p.rect(cx - s * 0.28f, cy + s * 0.40f, s * 0.09f, s * 0.24f, rgb, 1f);
+        p.rect(cx + s * 0.19f, cy + s * 0.40f, s * 0.09f, s * 0.24f, rgb, 1f);
+        p.circulo(cx - s * 0.20f, cy - s * 0.09f, s * 0.08f, rgb, 1f);
+        p.circulo(cx + s * 0.14f, cy - s * 0.09f, s * 0.08f, rgb, 1f);
+    }
+
+    public static void corazon(Pincel p, float cx, float cy, float r, int rgb, float alfa) {
+        p.circulo(cx - 0.30f * r, cy + 0.15f * r, 0.44f * r, rgb, alfa);
+        p.circulo(cx + 0.30f * r, cy + 0.15f * r, 0.44f * r, rgb, alfa);
+        p.rectRotado(cx, cy - 0.18f * r, 0.66f * r, 0.66f * r, 45f, rgb, alfa);
+        p.circulo(cx - 0.36f * r, cy + 0.24f * r, 0.11f * r, 0xFFFFFF, 0.35f * alfa);
+    }
+
+    /** Reloj sencillo; 'fondo' debe ser el color de la superficie donde se dibuja. */
+    public static void reloj(Pincel p, float cx, float cy, float r, int rgb, int fondo) {
+        p.circulo(cx, cy, r, rgb);
+        p.circulo(cx, cy, r * 0.76f, fondo);
+        p.rectRotado(cx, cy + r * 0.20f, r * 0.12f, r * 0.46f, 0f, rgb, 1f);
+        p.rectRotado(cx + r * 0.20f, cy, r * 0.46f, r * 0.12f, 0f, rgb, 1f);
+        p.circulo(cx, cy, r * 0.13f, rgb);
+    }
+
+    public static void check(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        p.rectRotado(cx - 0.25f * s, cy - 0.02f * s, 0.50f * s, 0.18f * s, -45f, rgb, alfa);
+        p.rectRotado(cx + 0.14f * s, cy + 0.10f * s, 0.75f * s, 0.18f * s, 48f, rgb, alfa);
+    }
+
+    public static void cruz(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        p.rectRotado(cx, cy, s * 0.82f, s * 0.20f, 45f, rgb, alfa);
+        p.rectRotado(cx, cy, s * 0.82f, s * 0.20f, -45f, rgb, alfa);
+    }
+
+    public static void flechaIzquierda(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        p.rect(cx - 0.28f * s, cy - 0.08f * s, 0.78f * s, 0.16f * s, rgb, alfa);
+        p.rectRotado(cx - 0.28f * s, cy + 0.15f * s, 0.34f * s, 0.14f * s, 45f, rgb, alfa);
+        p.rectRotado(cx - 0.28f * s, cy - 0.15f * s, 0.34f * s, 0.14f * s, -45f, rgb, alfa);
+    }
+
+    public static void campana(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        p.circulo(cx, cy + 0.06f * s, 0.42f * s, rgb, alfa);
+        p.rect(cx - 0.42f * s, cy - 0.30f * s, 0.84f * s, 0.38f * s, rgb, alfa);
+        p.redondeado(cx - 0.55f * s, cy - 0.38f * s, 1.10f * s, 0.14f * s, 0.07f * s, rgb, alfa);
+        p.circulo(cx, cy - 0.46f * s, 0.10f * s, rgb, alfa);
+        p.circulo(cx, cy + 0.52f * s, 0.08f * s, rgb, alfa);
+    }
+
+    public static void destello(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        p.rectRotado(cx, cy, s, s * 0.20f, 0f, rgb, alfa);
+        p.rectRotado(cx, cy, s * 0.20f, s, 0f, rgb, alfa);
+        p.circulo(cx, cy, s * 0.15f, rgb, Math.min(1f, alfa * 1.4f));
+    }
+
+    public static void vapor(Pincel p, float cx, float y, float ancho, float t, int rgb, float alfa) {
+        for (int i = 0; i < 4; i++) {
+            float fase = t * 1.1f + i * 1.6f;
+            float x = cx + (float) Math.sin(fase) * ancho * 0.20f + (i - 1.5f) * ancho * 0.17f;
+            float alto = (t * 22f + i * 14f) % 52f;
+            float r = 5.5f + (i % 2) * 2f;
+            float a = Math.max(0f, 1f - alto / 52f) * alfa;
+            p.circulo(x, y + alto, r, rgb, a);
+        }
     }
 
     // =====================================================================  CLIENTE

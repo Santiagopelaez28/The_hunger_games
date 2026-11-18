@@ -43,7 +43,10 @@ Son las mismas estructuras de `java.util` que usaba el proyecto original.
 ## Imágenes (carpeta `assets/`)
 
 - `nubes.jpg`: cielo que se ve detrás de los clientes.
-- `madera.jpg`: fondo del mostrador.
+- `madera.jpg`: madera del mostrador y de la zona de preparación.
+- `fondo_menu.png`: ilustración del menú principal (diner al atardecer).
+- `fondo_tienda.png`: despensa de la tienda entre días.
+- `fondo_fin.png`: calle de noche para la pantalla final.
 
 Para cambiarlas, reemplaza el archivo con el mismo nombre (en minúsculas) o edita los nombres en `FoodFlowGame.create()`.
 Se ajustan al área sin deformarse; `RECORTE_CIELO` en `JuegoScreen` elige qué parte del cielo se ve (0 a 1).
@@ -53,7 +56,7 @@ Si una imagen falta, el juego usa un color liso y sigue funcionando.
 
 - Los textos en pantalla van sin tildes ni eñe porque la fuente que trae LibGDX no garantiza esos caracteres.
   Para usarlos, agrega una fuente `.fnt` a `assets/` y cárgala en `Pincel`.
-- Todo se dibuja con formas (no hay imágenes). La cara de cada cliente cambia con su paciencia: sonríe, se pone serio y se enoja.
+- La interfaz, los clientes y la comida se dibujan con formas; los fondos son imágenes. La cara de cada cliente cambia con su paciencia: sonríe, se pone serio y se enoja.
 - El primer Pan del plato es la base; cualquier otro Pan se dibuja como tapa con ajonjolí.
-- Para ingredientes nuevos: agrégalos en `Catalogo` y dibújalos en `Dibujos.capa` (si no, salen como una barra de su color).
+- Para ingredientes nuevos: agrégalos en `Catalogo` y dibújalos en `Dibujos.capa` (hamburguesa) y `Dibujos.icono` (icono suelto de la tienda, botones y recetas).
 - Para usar imágenes en vez de formas, ponlas en `assets/` y cárgalas con `Texture`.

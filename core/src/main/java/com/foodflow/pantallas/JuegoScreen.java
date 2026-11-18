@@ -11,40 +11,52 @@ import com.foodflow.ui.Pincel;
 
 import java.util.List;
 
-/** Pantalla principal: cola de clientes, pedido en atención, plato (pila) y botones de ingredientes. */
+/** Pantalla principal: cola de clientes, pedido en atencion, plato (pila) y botones de ingredientes. */
 public class JuegoScreen extends PantallaBase {
-    private static final int[] COLORES_CLIENTE = {0x6FB1FC, 0xF08BA4, 0x9BE08F, 0xF2B66D, 0xB69CF2, 0x7FD6C9};
     private static final int MAX_BOTONES = 10;
 
-    // Botones de ingredientes (6 por fila) y botones de acción
-    private static final float BW = 140, BH = 44;
-    private static final float AY = 26, AH = 44, AW = 200;
-    private static final float ATENDER_X = 30, DESHACER_X = 250, ENTREGAR_X = 470;
+    // Botones de ingredientes (6 por fila) y botones de accion
+    private static final float BW = 144, BH = 46;
+    private static final float AY = 14, AH = 52, AW = 296;
+    private static final float ATENDER_X = 28, DESHACER_X = 332, ENTREGAR_X = 636;
 
-    // Parte del cielo que se ve detrás de los clientes (0 = franja de arriba, donde está la nube grande)
+    // Boton para salir de la pausa
+    private static final float PAUSA_X = 380, PAUSA_Y = 178, PAUSA_W = 200, PAUSA_H = 46;
+
+    // Parte del cielo que se ve detras de los clientes (0 = franja de arriba)
     private static final float RECORTE_CIELO = 0.04f;
 
     private boolean pausado = false;
+    private float brinco = 0f;
+    private int tamPlatoAnterior = 0;
+    private String mensajeVisto = "";
+    private float tiempoMensaje = 0f;
 
     public JuegoScreen(FoodFlowGame juego) { super(juego); }
 
-    private static float bx(int i) { return 30 + (i % 6) * 150; }
-    private static float by(int i) { return 140 - (i / 6) * 52; }
+    private static float bx(int i) { return 24 + (i % 6) * 152; }
+    private static float by(int i) { return i < 6 ? 132 : 78; }
 
     @Override
     public void render(float dt) {
         Mundo m = juego.mundo;
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) pausado = !pausado;
-        if (!pausado) {
+        if (pausado) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.P)
+                    || (hayClick() && dentro(toque, PAUSA_X, PAUSA_Y, PAUSA_W, PAUSA_H))) {
+                pausado = false;
+            }
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+            pausado = true;
+        } else {
             leerEntrada(m);
-            m.actualizar(Math.min(dt, 0.05f));   // tope de 50 ms: un tirón de la ventana no rompe la partida
+            m.actualizar(Math.min(dt, 0.05f));   // tope de 50 ms: un tiron de la ventana no rompe la partida
         }
 
         if (m.getEstado() == Mundo.Estado.DIA_TERMINADO) { juego.setScreen(new TiendaScreen(juego)); return; }
         if (m.getEstado() == Mundo.Estado.FIN_JUEGO) { juego.setScreen(new FinScreen(juego)); return; }
 
-        dibujar(m);
+        dibujar(m, dt);
     }
 
     // ------------------------------------------------------------------ entrada
@@ -76,126 +88,321 @@ public class JuegoScreen extends PantallaBase {
 
     // ------------------------------------------------------------------ dibujo
 
-    private static void barra(Pincel p, float x, float y, float w, float h, float fraccion) {
-        p.rect(x, y, w, h, 0x3A3E50);
-        int color = fraccion > 0.5f ? 0x6BD66B : fraccion > 0.25f ? 0xF2C230 : 0xFF6B6B;
-        p.rect(x, y, w * fraccion, h, color);
-    }
-
-    private void dibujar(Mundo m) {
+    private void dibujar(Mundo m, float dt) {
         Pincel p = juego.pincel;
         List<Cliente> cola = m.getCola();
         List<Ingrediente> plato = m.getPlato();
         List<Ingrediente> ing = m.getDisponibles();
         Cliente actual = m.getEnAtencion();
+        float t = p.getTiempo();
+
+        if (!m.getMensaje().equals(mensajeVisto)) {
+            mensajeVisto = m.getMensaje();
+            tiempoMensaje = 0f;
+        } else {
+            tiempoMensaje += dt;
+        }
+        if (plato.size() > tamPlatoAnterior) brinco = 1f;
+        tamPlatoAnterior = plato.size();
+        brinco = Math.max(0f, brinco - dt * 5f);
+        float salto = brinco * 6f;
 
         empezarFrame();
 
-        // Fondos: cielo con nubes detrás de los clientes y madera en el mostrador
-        p.imagenCubriendo(juego.nubes, 0, 424, 960, 136, 0.5f, RECORTE_CIELO, 0x8EDBF9);
-        p.imagenCubriendo(juego.madera, 0, 205, 960, 219, 0.5f, 0f, 0xD9A441);
-        p.rect(0, 419, 960, 6, 0x6B4A1E);   // borde del mostrador
-        p.rect(0, 205, 960, 4, 0x4A3212);   // sombra de abajo
+        // ---------------------------------------------------------- escenario
+        p.imagenCubriendo(juego.nubes, 0, 410, 960, 138, 0.5f, RECORTE_CIELO, 0x8EDBF9);
+        p.halo(888, 518, 78, 0xFFE29A, 0.35f);
+        p.imagenCubriendo(juego.madera, 0, 220, 960, 194, 0.5f, 0f, 0xD9A441);
+        p.degradadoAlpha(0, 220, 960, 194, 0x2A1608, 0.24f, 0f);
+        p.rect(0, 412, 960, 5, 0x4A2F12, 0.92f);
+        p.rect(0, 412, 960, 2, 0xFFE1A6, 0.32f);
+        p.rect(0, 218, 960, 4, 0x120B05, 0.65f);
+        // zona de preparacion: madera oscura con el mismo tono del mostrador
+        p.imagenCubriendo(juego.madera, 0, 0, 960, 218, 0.5f, 0f, 0x3A2412);
+        p.rect(0, 0, 960, 218, 0x0E1018, 0.68f);
+        p.degradadoAlpha(0, 0, 960, 218, 0x080A10, 0.46f, 0.04f);
+        p.rect(0, 216, 960, 2, 0xF2B33D, 0.14f);
 
-        // HUD
-        p.rect(0, 560, 960, 40, 0x1B1D26);
-        p.texto("Dia " + m.getDia(), 20, 588, 0xFFFFFF);
-        p.texto("Monedas: $" + m.getMonedas(), 130, 588, 0xFFD166);
-        p.texto("Vidas: " + m.getVidas(), 340, 588, m.getVidas() <= 2 ? 0xFF6B6B : 0xFFFFFF);
+        // ---------------------------------------------------------- HUD
+        p.degradado(0, 548, 960, 52, 0x141621, 0x2A2E44);
+        p.rect(0, 548, 960, 2, 0xF2B33D, 0.75f);
+        p.rect(0, 546, 960, 2, 0x07080D, 0.75f);
+
+        p.redondeado(16, 559, 92, 30, 10, 0x8A5B0D, 1f);
+        p.redondeado(16, 561, 92, 28, 10, 0xF2B33D, 1f);
+        p.redondeado(19, 572, 86, 14, 7, 0xFFFFFF, 0.17f);
+        p.textoCentrado("DIA " + m.getDia(), 62, 575, 0x3A2708, 0.95f);
+
+        Dibujos.moneda(p, 138, 574, 13);
+        p.texto("$" + m.getMonedas(), 157, 581, 0xFFD166, 1.1f);
+
+        if (m.getVidas() <= 2) {
+            p.halo(325, 574, 78, 0xFF6B6B, 0.18f + 0.12f * (float) Math.sin(t * 5f));
+        }
+        for (int i = 0; i < Mundo.VIDAS_INICIALES; i++) {
+            int color = i < m.getVidas() ? 0xFF6B6B : 0x3A3E50;
+            Dibujos.corazon(p, 272 + i * 25, 574, 10.5f, color, 1f);
+        }
+
+        Dibujos.reloj(p, 424, 574, 12, 0xBFD7FF, 0x191C2B);
+        float fracTiempo = Math.max(0f, Math.min(1f, m.getTiempoDia() / Mundo.DURACION_DIA));
+        Dibujos.barra(p, 446, 568, 300, 12, m.getTiempoDia() > 0 ? fracTiempo : 0f);
         if (m.getTiempoDia() > 0) {
-            p.texto("Tiempo: " + (int) Math.ceil(m.getTiempoDia()) + " s", 480, 588, 0xFFFFFF);
+            p.textoCentrado((int) Math.ceil(m.getTiempoDia()) + " s", 770, 574, 0xFFFFFF, 0.78f);
         } else {
-            p.texto("Atiende a los ultimos clientes", 480, 588, 0x8EE39B);
+            p.textoCentrado("Ultimos clientes", 770, 574, 0x8EE39B, 0.66f);
         }
+        p.tecla("P", 920, 574);
 
-        // Clientes en orden de llegada: el primero (el que se atiende) tiene borde dorado y la etiqueta SIGUIENTE
+        // ---------------------------------------------------------- cola de clientes
         for (int i = 0; i < Mundo.CAPACIDAD_COLA; i++) {
-            float x = 30 + i * 150, y = 430;
-            p.rect(x, y, 135, 95, 0xFFFFFF, 0.25f);
-            if (i == 0 && !cola.isEmpty()) {
-                p.rect(x - 3, y + 95, 141, 3, 0xFFD166);
-                p.rect(x - 3, y - 3, 141, 3, 0xFFD166);
-                p.rect(x - 3, y - 3, 3, 101, 0xFFD166);
-                p.rect(x + 135, y - 3, 3, 101, 0xFFD166);
-                p.rect(x - 3, y + 98, 72, 15, 0xFFD166);
-                p.textoCentrado("SIGUIENTE", x + 33, y + 105.5f, 0x1B1D26, 0.6f);
+            float x = 24 + i * 184, y = 418, w = 168, h = 114;
+            Cliente c = i < cola.size() ? cola.get(i) : null;
+            boolean siguiente = i == 0 && c != null;
+            float animo = c == null ? 1f : c.fraccionPaciencia();
+
+            if (siguiente) {
+                p.halo(x + w / 2f, y + h / 2f, 100f, 0xFFC24A, 0.20f + 0.06f * (float) Math.sin(t * 3f));
             }
-            if (i < cola.size()) {
-                Cliente c = cola.get(i);
-                Dibujos.cliente(p, x + 67, y + 62, 17, c.getAspecto(), c.fraccionPaciencia());
-                p.texto("#" + c.getNumero(), x + 6, y + 91, 0x2B4A6B, 0.7f);
-                barra(p, x + 10, y + 6, 115, 6, c.fraccionPaciencia());
+            if (c != null && animo < 0.25f) {
+                p.halo(x + w / 2f, y + h / 2f, 92f, 0xFF6B6B, 0.16f + 0.10f * (float) Math.sin(t * 8f));
             }
+
+            p.panel(x, y, w, h, 16, siguiente ? 0xFFF0CC : 0xFFF7E6,
+                    siguiente ? 0xFFC24A : 0xD9C79B, 0.98f);
+
+            if (siguiente) {
+                p.redondeado(x + w - 94, y + h - 25, 86, 17, 6, 0xF2B33D, 1f);
+                p.textoCentrado("SIGUIENTE", x + w - 51, y + h - 16.5f, 0x3A2708, 0.55f);
+            }
+
+            if (c == null) {
+                p.circulo(x + w / 2f, y + 52, 22, 0xBFAE86, 0.16f);
+                p.redondeado(x + w / 2f - 24, y + 22, 48, 28, 14, 0xBFAE86, 0.13f);
+                p.textoCentrado("Libre", x + w / 2f, y + 32, 0x8B7B55, 0.78f);
+                continue;
+            }
+
+            float bob = (float) Math.sin(t * 3f + i * 0.7f) * 1.5f;
+            Dibujos.cliente(p, x + 48, y + 70 + bob, 18f, c.getAspecto(), animo);
+
+            // mini hamburguesa del pedido
+            p.elipse(x + 121, y + 37, 27, 5, 0x1A1208, 0.18f);
+            Dibujos.hamburguesa(p, x + 121, y + 38, 55, 46, c.getReceta());
+
+            Dibujos.barra(p, x + 12, y + 10, w - 24, 9, animo);
         }
 
-        // Mostrador: el cliente en atencion y la hamburguesa que pidio
-        p.rect(30, 215, 440, 200, 0x2B1B0E, 0.55f);
+        // ---------------------------------------------------------- mostrador: cliente y comanda
+        float cx = 24, cy = 228, cw = 472, ch = 182;
+        p.panel(cx, cy, cw, ch, 18, 0x2B1B11, 0x6B4A26, 0.97f);
+
         if (actual == null) {
-            p.textoCentrado("Nadie en el mostrador", 250, 340, 0x9AA0B4, 1f);
-            p.textoCentrado("Pulsa ATENDER (ESPACIO)", 250, 305, 0xFFD166, 1f);
+            p.texto("MOSTRADOR", 40, 399, 0xD8B98A, 0.62f);
+            p.circulo(100, 330, 46, 0x3B2A1C, 0.95f);
+            p.circulo(100, 330, 41, 0x241811, 1f);
+            Dibujos.campana(p, 100, 330, 38, 0xC9A86A, 0.35f);
+            Dibujos.barra(p, 34, 250, 132, 10, 0f);
+            p.textoCentrado("Nadie en el mostrador", 320, 338, 0xFFF3D6, 1.05f);
+            p.textoCentrado("Pulsa ATENDER o ESPACIO", 320, 306, 0xFFD166, 0.82f);
         } else {
-            float animo = actual.fraccionPaciencia();
-            List<Ingrediente> receta = actual.getReceta();
-            p.texto("Cliente #" + actual.getNumero() + " pide:", 45, 405, 0xFFFFFF);
-            barra(p, 45, 380, 410, 8, animo);
-            Dibujos.cliente(p, 105, 325, 24, actual.getAspecto(), animo);
-
-            p.rect(185, 256, 130, 6, 0xE8E8E8);
-            Dibujos.hamburguesa(p, 250, 262, 120, 105, receta);
-
             int aciertos = 0;
+            List<Ingrediente> receta = actual.getReceta();
             while (aciertos < plato.size() && aciertos < receta.size() && plato.get(aciertos) == receta.get(aciertos)) {
                 aciertos++;
             }
+
+            p.texto("CLIENTE #" + actual.getNumero(), 40, 399, 0xFFD166, 0.72f);
+            p.halo(100, 330, 60, 0xFFC24A, 0.18f);
+            p.circulo(100, 330, 46, 0x3B2A1C, 0.95f);
+            p.circulo(100, 330, 42, 0x241811, 1f);
+            float bob = (float) Math.sin(t * 2.5f) * 1.5f;
+            Dibujos.cliente(p, 100, 346 + bob, 25f, actual.getAspecto(), actual.fraccionPaciencia());
+            p.texto("PACIENCIA", 36, 262, 0xD8B98A, 0.55f);
+            Dibujos.barra(p, 34, 244, 132, 10, actual.fraccionPaciencia());
+
+            // comanda de papel
+            float tx = 176, ty = 240, tw = 304, th = 158;
+            p.panel(tx, ty, tw, th, 12, 0xFFF3D6, 0xD9B77A, 1f);
+            p.redondeado(tx + 10, ty + th - 7, tw - 20, 2, 1, 0xFFFFFF, 0.40f);
+            p.texto("PEDIDO #" + actual.getNumero(), 190, 382, 0x4A3212, 0.95f);
+            p.redondeado(380, 369, 84, 21, 8, 0xF2B33D, 1f);
+            p.textoCentrado("PAGA $" + actual.pagoBase(), 422, 379.5f, 0x3A2708, 0.62f);
+            for (int d = 0; d < 18; d++) {
+                p.rect(190 + d * 15.5f, 366, 8, 1.5f, 0xC9AE7E, 0.85f);
+            }
+
             for (int i = 0; i < receta.size(); i++) {
-                p.texto((i + 1) + ". " + receta.get(i).getNombre(), 335, 372 - i * 20,
-                        i < aciertos ? 0x6BD66B : 0xB9BED0, 0.9f);
+                float fila = 348 - i * 17f;
+                boolean hecha = i < aciertos;
+                Dibujos.icono(p, receta.get(i), 198, fila + 4, 18);
+                p.texto((i + 1) + ". " + receta.get(i).getNombre(), 214, fila,
+                        hecha ? 0x2E7D32 : 0x4A3212, 0.78f);
+                if (hecha) Dibujos.check(p, 456, fila + 4, 10, 0x2E7D32, 1f);
             }
-            if (!m.platoCoincide()) {
-                p.texto("Algo no coincide: usa DESHACER", 45, 245, 0xFF6B6B, 0.95f);
+
+            String estado;
+            int colorEstado;
+            if (plato.isEmpty()) {
+                estado = "Arma el pedido de abajo hacia arriba";
+                colorEstado = 0x8A6A42;
+            } else if (!m.platoCoincide()) {
+                estado = "Algo no coincide: usa DESHACER";
+                colorEstado = 0xC0392B;
             } else if (plato.size() == receta.size()) {
-                p.texto("Listo: pulsa ENTREGAR", 45, 245, 0x6BD66B, 0.95f);
+                estado = "Listo! Pulsa ENTREGAR";
+                colorEstado = 0x2E7D32;
+            } else {
+                estado = "Vas bien, sigue la receta";
+                colorEstado = 0x8A6A42;
+            }
+            p.circulo(194, 249, 4, colorEstado, 1f);
+            p.texto(estado, 204, 252, colorEstado, 0.68f);
+        }
+
+        // ---------------------------------------------------------- plato y pila
+        float px = 508, py = 228, pw = 428, ph = 182;
+        p.panel(px, py, pw, ph, 18, 0x2B1B11, 0x6B4A26, 0.97f);
+        p.texto("TU PLATO", px + 16, 399, 0xD8B98A, 0.64f);
+        p.redondeado(px + pw - 56, 386, 40, 19, 7, 0x1A120C, 0.8f);
+        p.textoCentrado(plato.size() + "/" + Mundo.MAX_PLATO, px + pw - 36, 395.5f,
+                plato.size() >= Mundo.MAX_PLATO ? 0xFFB86B : 0xFFF3D6, 0.6f);
+
+        p.halo(644, 312, 110, 0xFFB347, 0.18f);
+        p.elipse(644, 248, 132, 20, 0x090502, 0.50f);
+        p.elipse(644, 254, 132, 20, 0xE8E4D8);
+        p.elipse(644, 257, 108, 14, 0xCBC5B6);
+        Dibujos.hamburguesa(p, 644, 260 + salto, 176, 138, plato);
+
+        if (plato.isEmpty()) {
+            p.textoCentrado(actual == null ? "Atiende a un cliente" : "Agrega ingredientes",
+                    644, 330, 0xB6A98C, 0.88f);
+        }
+
+        p.texto("CAPAS", 790, 399, 0xD8B98A, 0.55f);
+        for (int k = 0; k < Mundo.MAX_PLATO; k++) {
+            float sy = 250 + k * 16f;
+            boolean llena = k < plato.size();
+            boolean tope = k == plato.size() - 1;
+            if (!llena) {
+                p.redondeado(790, sy, 130, 13, 4, 0x1A120C, 0.42f);
+                p.rect(798, sy + 6, 5, 1.5f, 0x7A6440, 0.35f);
+                continue;
+            }
+            if (tope) p.redondeado(789, sy - 1, 132, 15, 5, 0xF2B33D, 0.92f);
+            p.redondeado(790, sy, 130, 13, 4, 0x241811, 1f);
+            p.redondeado(793, sy + 2, 5, 9, 2, plato.get(k).getColor(), 1f);
+            p.texto(plato.get(k).getNombre(), 802, sy + 10.5f, tope ? 0xFFD166 : 0xE8DFC9, 0.62f);
+        }
+
+        // ---------------------------------------------------------- mensaje flotante
+        String msg = m.getMensaje();
+        if (!msg.isEmpty()) {
+            boolean malo = msg.contains("incorrecto") || msg.contains("canso") || msg.contains("lleno")
+                    || msg.contains("agoto") || msg.contains("perdio");
+            boolean bueno = !malo && (msg.contains("correcto") || msg.contains("Dia") || msg.startsWith("Pedido"));
+            int borde = bueno ? 0x6BD66B : malo ? 0xFF6B6B : 0xF2B33D;
+            float esc = 0.72f + 0.13f * Math.min(1f, tiempoMensaje * 8f);
+            float anchoPanel = Math.min(780f, p.anchoTexto(msg, esc) + 48f);
+            float mx = 480 - anchoPanel / 2f;
+            p.panel(mx, 184, anchoPanel, 31, 15, 0x16131E, borde, 0.97f);
+            p.circulo(mx + 18, 199.5f, 8, borde, 0.95f);
+            if (bueno) Dibujos.check(p, mx + 18, 199.5f, 9, 0x10220F, 1f);
+            else if (malo) p.textoCentrado("!", mx + 18, 200, 0x1A0E0E, 0.62f);
+            else Dibujos.destello(p, mx + 18, 199.5f, 11, 0x2A1B08, 0.9f);
+            p.textoCentrado(msg, mx + anchoPanel / 2f + 8, 200, 0xFFF3D6, esc);
+        }
+
+        // ---------------------------------------------------------- ingredientes
+        if (msg.isEmpty()) {
+            p.redondeado(20, 185, 920, 27, 9, 0x0B0D13, 0.42f);
+            p.rect(32, 210, 896, 1, 0xF2B33D, 0.22f);
+            p.texto("INGREDIENTES", 30, 197, 0xD8C39A, 0.56f);
+            String cuenta = ing.size() + "/" + MAX_BOTONES;
+            p.texto(cuenta, 928 - p.anchoTexto(cuenta, 0.56f), 197, 0xD8C39A, 0.56f);
+            if (ing.size() <= 6) {
+                String pista = "La tienda abre al terminar el dia";
+                float anchoPista = p.anchoTexto(pista, 0.62f);
+                float hx = 480 - anchoPista / 2f;
+                Dibujos.destello(p, hx - 17, 101, 11, 0xE8B85C, 0.55f);
+                p.texto(pista, hx, 105, 0x8E8470, 0.62f);
             }
         }
-
-        // Plato: se ve la hamburguesa y, a la derecha, la lista de arriba hacia abajo
-        p.rect(545, 215, 390, 200, 0x2B1B0E, 0.55f);
-        p.texto("PLATO " + plato.size() + "/" + Mundo.MAX_PLATO, 797, 402, 0xFFFFFF, 0.9f);
-        p.elipse(670, 228, 118, 14, 0xE9E9EE);
-        p.elipse(670, 230, 96, 9, 0xCFCFD8);
-        Dibujos.hamburguesa(p, 670, 232, 190, 175, plato);
-        if (plato.isEmpty() && actual != null) {
-            p.textoCentrado("Plato vacio: agrega ingredientes", 670, 300, 0x9AA0B4, 0.9f);
-        }
-        for (int j = plato.size() - 1, fila = 0; j >= 0; j--, fila++) {
-            boolean tope = j == plato.size() - 1;
-            p.texto(plato.get(j).getNombre() + (tope ? " (tope)" : ""), 797, 378 - fila * 17,
-                    tope ? 0xFFD166 : 0xB9BED0, 0.8f);
-        }
-
-        // Mensaje de eventos
-        if (!m.getMensaje().isEmpty()) p.textoCentrado(m.getMensaje(), 480, 194, 0xFFD166, 1f);
-
-        // Ingredientes disponibles (arreglo dinamico): un boton con icono por cada uno
         boolean puedeAgregar = actual != null && plato.size() < Mundo.MAX_PLATO;
         for (int i = 0; i < ing.size() && i < MAX_BOTONES; i++) {
             Dibujos.botonIngrediente(p, ing.get(i).getNombre(), bx(i), by(i), BW, BH, ing.get(i), puedeAgregar,
                     String.valueOf((i + 1) % 10));
         }
 
-        // Acciones
-        p.boton("ATENDER", ATENDER_X, AY, AW, AH, 0x4D96FF, actual == null && !cola.isEmpty());
-        p.boton("DESHACER", DESHACER_X, AY, AW, AH, 0xF2994A, !plato.isEmpty());
-        p.boton("ENTREGAR", ENTREGAR_X, AY, AW, AH, 0x6BCB77, actual != null && !plato.isEmpty());
-        p.texto("ESPACIO atender/entregar   RETROCESO deshacer   1-9 y 0 ingredientes   P pausa",
-                30, 18, 0x7C8197, 0.8f);
+        // ---------------------------------------------------------- acciones
+        boolean listoParaEntregar = actual != null && !plato.isEmpty()
+                && plato.size() == actual.getReceta().size() && m.platoCoincide();
+        botonAccion(p, ATENDER_X, AY, AW, AH, "ATENDER", "ESPACIO", 0x4D96FF,
+                actual == null && !cola.isEmpty(), 0, false);
+        botonAccion(p, DESHACER_X, AY, AW, AH, "DESHACER", "RETROCESO", 0xF2994A,
+                !plato.isEmpty(), 1, false);
+        botonAccion(p, ENTREGAR_X, AY, AW, AH, "ENTREGAR", "ESPACIO", 0x6BCB77,
+                actual != null && !plato.isEmpty(), 2, listoParaEntregar);
 
-        if (pausado) {
-            p.rect(0, 0, 960, 600, 0x000000, 0.65f);
-            p.textoCentrado("PAUSA", 480, 330, 0xFFFFFF, 2.5f);
-            p.textoCentrado("Pulsa P para continuar", 480, 270, 0xFFD166, 1f);
+        // ---------------------------------------------------------- aviso de pocas vidas
+        if (m.getVidas() <= 2) {
+            float a = 0.07f + 0.05f * (float) Math.sin(t * 5f);
+            p.degradadoAlpha(0, 0, 960, 50, 0xFF3B3B, a, 0f);
+            p.degradadoAlpha(0, 550, 960, 50, 0xFF3B3B, 0f, a);
         }
 
+        if (pausado) dibujarPausa(p, t);
+
         terminarFrame();
+    }
+
+    private void botonAccion(Pincel p, float x, float y, float w, float h, String texto, String tecla,
+                             int color, boolean activo, int icono, boolean resaltado) {
+        float alfa = activo ? 1f : 0.38f;
+        boolean hover = activo && p.ratonDentro(x, y, w, h);
+        float dy = hover ? 2f : 0f;
+        float radio = 15f;
+        if (resaltado) {
+            float pulso = 0.5f + 0.5f * (float) Math.sin(p.getTiempo() * 4.5f);
+            p.halo(x + w / 2f, y + h / 2f, w * 0.58f, color, 0.20f + 0.16f * pulso);
+        }
+        p.redondeado(x, y - 5 + dy, w, h, radio, 0x05060A, 0.45f * alfa);
+        p.redondeado(x, y + dy - 1f, w, h + 2f, radio + 1, Pincel.mezclarRgb(color, 0x000000, 0.45f), alfa);
+        p.redondeado(x, y + dy, w, h, radio, color, alfa);
+        p.redondeado(x + 3, y + dy + h * 0.46f, w - 6, h * 0.48f, radio - 3,
+                0xFFFFFF, (hover ? 0.15f : 0.08f) * alfa);
+        p.redondeado(x + 3, y + dy + 2, w - 6, h * 0.26f, radio - 3,
+                Pincel.mezclarRgb(color, 0x000000, 0.30f), 0.28f * alfa);
+        p.rect(x + radio, y + dy + h - 2, w - 2 * radio, 1.4f, 0xFFFFFF, 0.30f * alfa);
+
+        int tinta = Pincel.tinta(color);
+        p.circulo(x + 34, y + dy + h / 2f, 17, 0x000000, 0.16f * alfa);
+        if (icono == 0) Dibujos.campana(p, x + 34, y + dy + h / 2f, 30, tinta, alfa);
+        else if (icono == 1) Dibujos.flechaIzquierda(p, x + 34, y + dy + h / 2f, 26, tinta, alfa);
+        else Dibujos.check(p, x + 34, y + dy + h / 2f, 25, tinta, alfa);
+
+        p.textoCentrado(texto, x + w / 2f, y + dy + h / 2f + 1, tinta, 1.0f, alfa);
+        p.setAlfa(alfa);
+        p.tecla(tecla, x + w - 37, y + dy + h / 2f);
+        p.setAlfa(1f);
+    }
+
+    private void dibujarPausa(Pincel p, float t) {
+        p.rect(0, 0, 960, 600, 0x080A10, 0.78f);
+        p.halo(480, 320, 220, 0xFFC24A, 0.12f);
+        p.panel(260, 145, 440, 310, 22, 0x24283A, 0x596080, 0.99f);
+        p.textoCentradoContorno("PAUSA", 480, 410, 0xFFD166, 2.2f, 0x1A1208);
+        p.textoCentrado("La paciencia de tus clientes esta en espera", 480, 372, 0xB9BED0, 0.78f);
+
+        float[] filas = {340, 308, 276, 244};
+        String[] teclas = {"ESPACIO", "RETROCESO", "1-0", "P"};
+        String[] textos = {"Atender / entregar", "Deshacer ingrediente", "Agregar ingrediente", "Continuar"};
+        for (int i = 0; i < filas.length; i++) {
+            p.tecla(teclas[i], 348, filas[i]);
+            p.texto(textos[i], 390, filas[i] + 4, 0xFFF3D6, 0.78f);
+        }
+
+        p.boton("CONTINUAR", PAUSA_X, PAUSA_Y, PAUSA_W, PAUSA_H, 0xFFC24A, true, true);
+        p.textoCentrado("Pulsa P para seguir", 480, 156, 0x9AA0B4, 0.65f);
     }
 }
