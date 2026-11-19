@@ -3,6 +3,7 @@ package com.foodflow.ui;
 import com.foodflow.logica.Catalogo;
 import com.foodflow.modelo.Aspecto;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.TipoPlato;
 
 import java.util.List;
 
@@ -32,7 +33,9 @@ public final class Dibujos {
         if (ing == Catalogo.LECHUGA) return 9f;
         if (ing == Catalogo.TOMATE) return 10f;
         if (ing == Catalogo.CEBOLLA) return 7f;
+        if (ing == Catalogo.PIMIENTO) return 8f;
         if (ing == Catalogo.HUEVO) return 9f;
+        if (ing == Catalogo.CHAMPINON) return 7f;
         if (ing == Catalogo.TOCINETA) return 8f;
         if (ing == Catalogo.PINA) return 9f;
         if (ing == Catalogo.AGUACATE) return 10f;
@@ -55,6 +58,105 @@ public final class Dibujos {
             float h = altoCapa(ing, i) * f;
             capa(p, ing, i == 0, true, cx, y, ANCHO_NOMINAL * f, h);
             y += h;
+        }
+    }
+
+    /**
+     * Dibuja el plato completo segun su tipo. La lista de capas siempre va en el orden de la receta.
+     */
+    public static void plato(Pincel p, TipoPlato tipo, float cx, float yBase, float ancho, float altoMax,
+                             List<Ingrediente> capas) {
+        if (capas == null || capas.isEmpty()) return;
+        if (tipo == TipoPlato.PIZZA) pizza(p, cx, yBase, ancho, altoMax, capas);
+        else if (tipo == TipoPlato.HOTDOG) hotdog(p, cx, yBase, ancho, altoMax, capas);
+        else hamburguesa(p, cx, yBase, ancho, altoMax, capas);
+    }
+
+    /** Pizza vista desde arriba: masa, salsa, queso y los ingredientes repartidos por la superficie. */
+    private static void pizza(Pincel p, float cx, float yBase, float ancho, float altoMax,
+                              List<Ingrediente> capas) {
+        boolean masa = false, salsa = false, queso = false;
+        for (Ingrediente ing : capas) {
+            if (ing == Catalogo.MASA) masa = true;
+            else if (ing == Catalogo.SALSA) salsa = true;
+            else if (ing == Catalogo.QUESO) queso = true;
+        }
+        if (!masa) return;
+
+        float d = Math.min(ancho, altoMax * 2.6f);
+        float rx = d * 0.50f;
+        float ry = d * 0.17f;
+        float cy = yBase + ry * 1.05f;
+
+        p.elipse(cx, cy, rx, ry, 0xD9A441);
+        p.elipse(cx, cy + ry * 0.10f, rx * 0.93f, ry * 0.84f, 0xE8B85C);
+        if (salsa) p.elipse(cx, cy + ry * 0.16f, rx * 0.80f, ry * 0.68f, 0xC0392B);
+        if (queso) {
+            p.elipse(cx, cy + ry * 0.19f, rx * 0.69f, ry * 0.56f, 0xF4D35E);
+            p.circulo(cx - rx * 0.24f, cy + ry * 0.15f, d * 0.025f, 0xFFE89A, 0.8f);
+            p.circulo(cx + rx * 0.18f, cy + ry * 0.23f, d * 0.022f, 0xFFE89A, 0.75f);
+            p.circulo(cx + rx * 0.30f, cy - ry * 0.02f, d * 0.018f, 0xFFE89A, 0.7f);
+        }
+
+        int indice = 0;
+        for (Ingrediente ing : capas) {
+            if (ing == Catalogo.MASA || ing == Catalogo.SALSA || ing == Catalogo.QUESO) continue;
+            float ang = 0.45f + indice * 2.1f;
+            float tx = cx + (float) Math.cos(ang) * rx * 0.46f;
+            float ty = cy + (float) Math.sin(ang) * ry * 0.46f;
+            if (ing == Catalogo.PEPPERONI) {
+                float r = Math.max(1.8f, d * 0.035f);
+                p.circulo(tx, ty, r, 0xB8322A);
+                p.circulo(tx - r * 0.28f, ty + r * 0.20f, r * 0.20f, 0x7A201C, 0.8f);
+                p.circulo(tx + r * 0.30f, ty - r * 0.15f, r * 0.16f, 0x7A201C, 0.8f);
+            } else {
+                icono(p, ing, tx, ty, Math.max(9f, d * 0.22f));
+            }
+            indice++;
+        }
+    }
+
+    /** Hotdog de lado: pan inferior, salchicha, ingredientes y pan superior si la receta lo pide. */
+    private static void hotdog(Pincel p, float cx, float yBase, float ancho, float altoMax,
+                               List<Ingrediente> capas) {
+        if (capas.get(0) != Catalogo.PAN) return;
+
+        float d = Math.min(ancho, altoMax * 2.0f);
+        float len = d * 0.92f;
+        float h = d * 0.30f;
+        float x = cx - len / 2f;
+        boolean tapa = capas.size() > 1 && capas.get(capas.size() - 1) == Catalogo.PAN;
+
+        p.redondeado(x, yBase, len, h * 0.62f, h * 0.30f, 0xD9A441);
+        p.redondeado(x + len * 0.04f, yBase + h * 0.08f, len * 0.92f, h * 0.20f,
+                h * 0.10f, 0xF0C878, 0.82f);
+
+        int salchichas = 0;
+        for (Ingrediente ing : capas) if (ing == Catalogo.SALCHICHA) salchichas++;
+        for (int k = 0; k < salchichas; k++) {
+            float sy = yBase + h * 0.37f + k * h * 0.20f;
+            p.redondeado(x + len * 0.05f, sy, len * 0.90f, h * 0.34f, h * 0.17f, 0xB5452F);
+            p.redondeado(x + len * 0.12f, sy + h * 0.08f, len * 0.54f, h * 0.08f,
+                    h * 0.04f, 0xD96B52, 0.68f);
+            for (int g = -1; g <= 1; g++) {
+                p.rectRotado(cx + g * len * 0.20f, sy + h * 0.16f, len * 0.015f,
+                        h * 0.24f, 24f, 0x7A2E20, 0.55f);
+            }
+        }
+
+        int indice = 0;
+        for (Ingrediente ing : capas) {
+            if (ing == Catalogo.PAN || ing == Catalogo.SALCHICHA) continue;
+            float tx = cx - len * 0.26f + (indice % 3) * len * 0.26f;
+            float ty = yBase + h * 0.68f;
+            icono(p, ing, tx, ty, Math.max(9f, d * 0.17f));
+            indice++;
+        }
+
+        if (tapa) {
+            p.redondeado(x, yBase + h * 1.00f, len, h * 0.34f, h * 0.17f, 0xE0B25A);
+            p.redondeado(x + len * 0.05f, yBase + h * 1.07f, len * 0.90f, h * 0.12f,
+                    h * 0.06f, 0xF0C878, 0.78f);
         }
     }
 
@@ -110,6 +212,21 @@ public final class Dibujos {
             }
             p.rectRotado(cx, y + h * 0.88f, w * 0.06f, h * 0.22f, 18f, 0x4CAF50, 1f);
             p.rectRotado(cx - w * 0.07f, y + h * 0.86f, w * 0.06f, h * 0.19f, -20f, 0x6BD66B, 1f);
+        } else if (ing == Catalogo.PIMIENTO) {
+            p.circulo(cx - w * 0.14f, cy - h * 0.08f, w * 0.25f, 0xD9382F);
+            p.circulo(cx + w * 0.14f, cy - h * 0.08f, w * 0.25f, 0xE5484D);
+            p.circulo(cx, cy - h * 0.04f, w * 0.29f, 0xF05A3C);
+            p.circulo(cx - w * 0.10f, cy + h * 0.03f, w * 0.11f, 0xFF8A70, 0.65f);
+            p.rect(cx - w * 0.025f, y + h * 0.66f, w * 0.05f, h * 0.18f, 0x3F9B46);
+            p.elipse(cx - w * 0.11f, y + h * 0.82f, w * 0.12f, h * 0.05f, 0x4CAF50);
+            p.elipse(cx + w * 0.11f, y + h * 0.82f, w * 0.12f, h * 0.05f, 0x6BD66B);
+        } else if (ing == Catalogo.CHAMPINON) {
+            p.redondeado(cx - w * 0.12f, y + h * 0.05f, w * 0.24f, h * 0.38f, w * 0.06f, 0xF0E2C8);
+            p.rect(cx - w * 0.09f, y + h * 0.09f, w * 0.06f, h * 0.22f, 0xDCCBAA, 0.85f);
+            cupula(p, cx, y + h * 0.38f, w * 0.82f, h * 0.46f, 0xB98A5E);
+            p.rect(cx - w * 0.41f, y + h * 0.36f, w * 0.82f, h * 0.05f, 0x9A6E48);
+            p.circulo(cx - w * 0.20f, y + h * 0.60f, w * 0.045f, 0xE8D6B8, 0.85f);
+            p.circulo(cx + w * 0.13f, y + h * 0.68f, w * 0.04f, 0xE8D6B8, 0.75f);
         } else if (ing == Catalogo.HUEVO) {
             p.elipse(cx, cy - h * 0.05f, w * 0.48f, h * 0.38f, 0xF7F3EA);
             p.elipse(cx - w * 0.17f, cy + h * 0.14f, w * 0.28f, h * 0.22f, 0xFDFBF5);
@@ -137,11 +254,37 @@ public final class Dibujos {
                 p.rectRotado(cx + k * w * 0.09f, cy + h * 0.36f, w * 0.07f, h * 0.28f,
                         k * 18f, k % 2 == 0 ? 0x4CAF50 : 0x3F9B46, 1f);
             }
-        } else {   // aguacate
+        } else if (ing == Catalogo.AGUACATE) {
             p.elipse(cx, cy, w * 0.38f, h * 0.46f, 0x3F6B2A);
             p.elipse(cx, cy - h * 0.02f, w * 0.30f, h * 0.38f, 0xA9D38B);
             p.circulo(cx, cy - h * 0.14f, w * 0.13f, 0x6B4226);
             p.circulo(cx - w * 0.02f, cy + h * 0.12f, w * 0.09f, 0xB9DDA0, 0.6f);
+        } else if (ing == Catalogo.MASA) {
+            p.elipse(cx, cy - h * 0.04f, w * 0.43f, h * 0.32f, 0xE0C084);
+            p.elipse(cx, cy + h * 0.05f, w * 0.34f, h * 0.23f, 0xF1DCA8);
+            p.circulo(cx - w * 0.18f, cy + h * 0.05f, w * 0.035f, 0xFFF3D6, 0.8f);
+            p.circulo(cx + w * 0.12f, cy - h * 0.06f, w * 0.03f, 0xFFF3D6, 0.7f);
+        } else if (ing == Catalogo.SALSA) {
+            p.circulo(cx, cy - h * 0.02f, w * 0.35f, 0xC0392B);
+            p.elipse(cx, cy - h * 0.30f, w * 0.25f, h * 0.08f, 0x8E2A20, 0.85f);
+            p.circulo(cx - w * 0.10f, cy + h * 0.08f, w * 0.09f, 0xE35D4F, 0.72f);
+            p.circulo(cx + w * 0.13f, cy - h * 0.04f, w * 0.05f, 0xF07A68, 0.65f);
+        } else if (ing == Catalogo.SALCHICHA) {
+            p.redondeado(cx - w * 0.45f, cy - h * 0.16f, w * 0.90f, h * 0.32f,
+                    h * 0.16f, 0xA8432F);
+            p.redondeado(cx - w * 0.32f, cy + h * 0.03f, w * 0.46f, h * 0.07f,
+                    h * 0.035f, 0xD96B52, 0.68f);
+            for (int k = -1; k <= 1; k++) {
+                p.rectRotado(cx + k * w * 0.20f, cy + h * 0.02f, w * 0.025f,
+                        h * 0.24f, 24f, 0x7A2E20, 0.55f);
+            }
+        } else if (ing == Catalogo.PEPPERONI) {
+            p.circulo(cx, cy, w * 0.36f, 0xB8322A);
+            p.circulo(cx - w * 0.10f, cy + h * 0.08f, w * 0.07f, 0xD66A58, 0.8f);
+            p.circulo(cx + w * 0.12f, cy - h * 0.05f, w * 0.045f, 0x7A201C, 0.75f);
+            p.circulo(cx - w * 0.14f, cy - h * 0.10f, w * 0.035f, 0x7A201C, 0.7f);
+        } else {
+            p.circulo(cx, cy, w * 0.36f, ing.getColor());
         }
     }
 
@@ -188,6 +331,20 @@ public final class Dibujos {
             pildora(p, cx - aw / 2f, y, aw, h, 0xEBD8F3);
             for (int k = 0; k < 4; k++) {
                 p.rect(cx - aw * 0.3f + k * aw * 0.2f, y + h * 0.15f, Math.max(1f, aw * 0.03f), h * 0.7f, 0xB78AD0);
+            }
+        } else if (ing == Catalogo.PIMIENTO) {
+            float aw = w * 0.94f;
+            pildora(p, cx - aw / 2f, y, aw, h, 0xD9382F);
+            for (int k = -2; k <= 2; k++) {
+                p.rect(cx + k * w * 0.17f, y + h * 0.08f, Math.max(1f, w * 0.025f), h * 0.84f, 0xF07A5A, 0.75f);
+            }
+        } else if (ing == Catalogo.CHAMPINON) {
+            float aw = w * 0.94f;
+            pildora(p, cx - aw / 2f, y, aw, h, 0xE8D6B8);
+            for (int k = -2; k <= 2; k++) {
+                float sx = cx + k * w * 0.17f;
+                p.circulo(sx, y + h * 0.52f, h * 0.34f, 0xC7A97B);
+                p.circulo(sx, y + h * 0.52f, h * 0.16f, 0x9A7A50, 0.8f);
             }
         } else if (ing == Catalogo.HUEVO) {
             float aw = w * 0.95f;
@@ -323,9 +480,29 @@ public final class Dibujos {
     }
 
     public static void flechaIzquierda(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
-        p.rect(cx - 0.28f * s, cy - 0.08f * s, 0.78f * s, 0.16f * s, rgb, alfa);
-        p.rectRotado(cx - 0.28f * s, cy + 0.15f * s, 0.34f * s, 0.14f * s, 45f, rgb, alfa);
-        p.rectRotado(cx - 0.28f * s, cy - 0.15f * s, 0.34f * s, 0.14f * s, -45f, rgb, alfa);
+        p.rect(cx - 0.17f * s, cy - 0.08f * s, 0.62f * s, 0.16f * s, rgb, alfa);
+        p.rectRotado(cx - 0.275f * s, cy + 0.15f * s, 0.54f * s, 0.15f * s, 33.7f, rgb, alfa);
+        p.rectRotado(cx - 0.275f * s, cy - 0.15f * s, 0.54f * s, 0.15f * s, -33.7f, rgb, alfa);
+    }
+
+    public static void flechaDerecha(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        p.rect(cx - 0.45f * s, cy - 0.08f * s, 0.62f * s, 0.16f * s, rgb, alfa);
+        p.rectRotado(cx + 0.275f * s, cy + 0.15f * s, 0.54f * s, 0.15f * s, -33.7f, rgb, alfa);
+        p.rectRotado(cx + 0.275f * s, cy - 0.15f * s, 0.54f * s, 0.15f * s, 33.7f, rgb, alfa);
+    }
+
+    /** Libro abierto, para el boton que abre el recetario. */
+    public static void libro(Pincel p, float cx, float cy, float s, int rgb, float alfa) {
+        float w = 0.90f * s, h = 0.68f * s;
+        p.redondeado(cx - w / 2f, cy - h / 2f, w * 0.47f, h, s * 0.07f, rgb, alfa);
+        p.redondeado(cx + w * 0.03f, cy - h / 2f, w * 0.47f, h, s * 0.07f, rgb, alfa);
+        p.rect(cx - s * 0.015f, cy - h / 2f, s * 0.03f, h, rgb, alfa);
+        for (int lado = -1; lado <= 1; lado += 2) {
+            for (int k = 0; k < 2; k++) {
+                p.rect(cx + lado * w * 0.27f - w * 0.16f, cy - h * 0.05f + k * h * 0.24f,
+                        w * 0.32f, Math.max(1f, s * 0.045f), 0xFFFFFF, 0.35f * alfa);
+            }
+        }
     }
 
     public static void campana(Pincel p, float cx, float cy, float s, int rgb, float alfa) {

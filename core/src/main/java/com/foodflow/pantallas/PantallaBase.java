@@ -31,6 +31,8 @@ public abstract class PantallaBase extends ScreenAdapter {
     }
 
     protected void empezarFrame() {
+        // Tope de 50 ms en todas las pantallas: evita que un salto del cursor, una
+        // pausa del OS o un hoyo de swap generen saltos visibles (parpadeos).
         tiempo += Math.min(Gdx.graphics.getDeltaTime(), 0.05f);
 
         // el mouse tambien se sigue sin hacer click, para resaltar botones

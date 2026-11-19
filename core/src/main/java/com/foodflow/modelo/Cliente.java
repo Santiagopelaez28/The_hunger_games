@@ -1,26 +1,30 @@
 package com.foodflow.modelo;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-/** Cliente que espera en la cola. La receta se lee de abajo hacia arriba (igual que la pila del plato). */
+/** Cliente que espera en la cola. La receta se arma en el orden en que aparece en la lista. */
 public class Cliente {
     private final int numero;
+    private final String nombreReceta;
+    private final TipoPlato tipoPlato;
     private final List<Ingrediente> receta;
     private final Aspecto aspecto;
     private final float pacienciaMax;
     private float restante;
 
-    public Cliente(int numero, List<Ingrediente> receta, float paciencia, Aspecto aspecto) {
+    public Cliente(int numero, Receta receta, float paciencia, Aspecto aspecto) {
         this.numero = numero;
+        this.nombreReceta = receta.getNombre();
+        this.tipoPlato = receta.getTipo();
+        this.receta = receta.getIngredientes();
         this.aspecto = aspecto;
-        this.receta = Collections.unmodifiableList(new ArrayList<>(receta));
         this.pacienciaMax = paciencia;
         this.restante = paciencia;
     }
 
     public int getNumero() { return numero; }
+    public String getNombreReceta() { return nombreReceta; }
+    public TipoPlato getTipoPlato() { return tipoPlato; }
     public List<Ingrediente> getReceta() { return receta; }
     public Aspecto getAspecto() { return aspecto; }
 

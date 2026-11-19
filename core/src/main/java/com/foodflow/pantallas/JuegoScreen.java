@@ -3,25 +3,32 @@ package com.foodflow.pantallas;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.foodflow.FoodFlowGame;
+import com.foodflow.logica.Catalogo;
+import com.foodflow.logica.ListaDoble;
 import com.foodflow.logica.Mundo;
 import com.foodflow.modelo.Cliente;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.TipoPlato;
 import com.foodflow.ui.Dibujos;
 import com.foodflow.ui.Pincel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** Pantalla principal: cola de clientes, pedido en atencion, plato (pila) y botones de ingredientes. */
 public class JuegoScreen extends PantallaBase {
-    private static final int MAX_BOTONES = 10;
+    private static final int MAX_BOTONES = 12;
 
     // Botones de ingredientes (6 por fila) y botones de accion
     private static final float BW = 144, BH = 46;
-    private static final float AY = 14, AH = 52, AW = 296;
-    private static final float ATENDER_X = 28, DESHACER_X = 332, ENTREGAR_X = 636;
+    private static final float AY = 14, AH = 52, AW = 218;
+    private static final float ATENDER_X = 18, DESHACER_X = 248, RECETAS_X = 478, ENTREGAR_X = 708;
 
     // Boton para salir de la pausa
     private static final float PAUSA_X = 380, PAUSA_Y = 178, PAUSA_W = 200, PAUSA_H = 46;
+
+    // Flechas para recorrer la despensa cuando hay mas de MAX_BOTONES ingredientes
+    private static final float PAG_Y = 198, PAG_IZQ_X = 844, PAG_DER_X = 878, PAG_R = 14;
 
     // Parte del cielo que se ve detras de los clientes (0 = franja de arriba)
     private static final float RECORTE_CIELO = 0.04f;
@@ -32,6 +39,11 @@ public class JuegoScreen extends PantallaBase {
     private String mensajeVisto = "";
     private float tiempoMensaje = 0f;
 
+    // Ventana visible de la lista doble: se mueve con las flechas o con las teclas IZQUIERDA/DERECHA.
+    private final List<Ingrediente> visibles = new ArrayList<>(MAX_BOTONES);
+    private ListaDoble.Nodo<Ingrediente> inicioPagina;
+    private int paginaIngredientes = 0;
+
     public JuegoScreen(FoodFlowGame juego) { super(juego); }
 
     private static float bx(int i) { return 24 + (i % 6) * 152; }
@@ -40,6 +52,7 @@ public class JuegoScreen extends PantallaBase {
     @Override
     public void render(float dt) {
         Mundo m = juego.mundo;
+        actualizarVisibles(m);
 
         if (pausado) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.P)
@@ -49,7 +62,7 @@ public class JuegoScreen extends PantallaBase {
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
             pausado = true;
         } else {
-            leerEntrada(m);
+            if (leerEntrada(m)) return;
             m.actualizar(Math.min(dt, 0.05f));   // tope de 50 ms: un tiron de la ventana no rompe la partida
         }
 
@@ -66,24 +79,102 @@ public class JuegoScreen extends PantallaBase {
         else if (!m.getPlato().isEmpty()) m.entregar();
     }
 
-    private void leerEntrada(Mundo m) {
-        List<Ingrediente> ing = m.getDisponibles();
+    private boolean leerEntrada(Mundo m) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            abrirRecetario();
+            return true;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) anteriorPagina();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) siguientePagina();
 
-        for (int i = 0; i < ing.size() && i < MAX_BOTONES; i++) {
-            int tecla = i < 9 ? Input.Keys.NUM_1 + i : Input.Keys.NUM_0;
-            if (Gdx.input.isKeyJustPressed(tecla)) m.agregarIngrediente(ing.get(i));
+        for (int i = 0; i < visibles.size(); i++) {
+            if (Gdx.input.isKeyJustPressed(teclaDe(i))) m.agregarIngrediente(visibles.get(i));
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) accionPrincipal(m);
         if (Gdx.input.isKeyJustPressed(Input.Keys.BACKSPACE)) m.deshacer();
 
         if (hayClick()) {
-            for (int i = 0; i < ing.size() && i < MAX_BOTONES; i++) {
-                if (dentro(toque, bx(i), by(i), BW, BH)) m.agregarIngrediente(ing.get(i));
+            if (dentro(toque, RECETAS_X, AY, AW, AH)) {
+                abrirRecetario();
+                return true;
+            }
+            if (paginaIngredientes > 0 && dentro(toque, PAG_IZQ_X - PAG_R, PAG_Y - PAG_R,
+                    PAG_R * 2, PAG_R * 2)) {
+                anteriorPagina();
+                return false;
+            }
+            if (paginaIngredientes + 1 < paginas(m) && dentro(toque, PAG_DER_X - PAG_R,
+                    PAG_Y - PAG_R, PAG_R * 2, PAG_R * 2)) {
+                siguientePagina();
+                return false;
+            }
+            for (int i = 0; i < visibles.size(); i++) {
+                if (dentro(toque, bx(i), by(i), BW, BH)) m.agregarIngrediente(visibles.get(i));
             }
             if (dentro(toque, ATENDER_X, AY, AW, AH)) m.atenderSiguiente();
             if (dentro(toque, DESHACER_X, AY, AW, AH)) m.deshacer();
             if (dentro(toque, ENTREGAR_X, AY, AW, AH) && !m.getPlato().isEmpty()) m.entregar();
         }
+        return false;
+    }
+
+    private void actualizarVisibles(Mundo m) {
+        ListaDoble<Ingrediente> despensa = m.getDespensa();
+        if (despensa.estaVacia()) {
+            inicioPagina = null;
+            paginaIngredientes = 0;
+            visibles.clear();
+            return;
+        }
+        if (inicioPagina == null) inicioPagina = despensa.getPrimero();
+        visibles.clear();
+        ListaDoble.Nodo<Ingrediente> nodo = inicioPagina;
+        for (int i = 0; i < MAX_BOTONES && nodo != null; i++) {
+            visibles.add(nodo.getDato());
+            nodo = nodo.getSiguiente();
+        }
+    }
+
+    private int paginas(Mundo m) {
+        return Math.max(1, (m.getDespensa().getTamano() + MAX_BOTONES - 1) / MAX_BOTONES);
+    }
+
+    /** Retrocede una pagina caminando por los enlaces anteriores de la lista doble. */
+    private void anteriorPagina() {
+        if (paginaIngredientes <= 0) return;
+        ListaDoble.Nodo<Ingrediente> nodo = inicioPagina;
+        for (int i = 0; i < MAX_BOTONES && nodo != null; i++) nodo = nodo.getAnterior();
+        inicioPagina = nodo != null ? nodo : juego.mundo.getDespensa().getPrimero();
+        paginaIngredientes--;
+        actualizarVisibles(juego.mundo);
+    }
+
+    /** Avanza una pagina caminando por los enlaces siguientes de la lista doble. */
+    private void siguientePagina() {
+        if (paginaIngredientes + 1 >= paginas(juego.mundo)) return;
+        ListaDoble.Nodo<Ingrediente> nodo = inicioPagina;
+        for (int i = 0; i < MAX_BOTONES && nodo != null; i++) nodo = nodo.getSiguiente();
+        if (nodo == null) return;
+        inicioPagina = nodo;
+        paginaIngredientes++;
+        actualizarVisibles(juego.mundo);
+    }
+
+    private void abrirRecetario() {
+        juego.setScreen(new RecetasScreen(juego, RecetasScreen.Origen.JUEGO));
+    }
+
+    /** Teclas 1-9 y 0 para los primeros diez ingredientes; Q y E para los dos ultimos. */
+    private static int teclaDe(int i) {
+        if (i < 9) return Input.Keys.NUM_1 + i;
+        if (i == 9) return Input.Keys.NUM_0;
+        return i == 10 ? Input.Keys.Q : Input.Keys.E;
+    }
+
+    private static String etiquetaTecla(int i) {
+        if (i < 9) return String.valueOf(i + 1);
+        if (i == 9) return "0";
+        return i == 10 ? "Q" : "E";
     }
 
     // ------------------------------------------------------------------ dibujo
@@ -92,7 +183,6 @@ public class JuegoScreen extends PantallaBase {
         Pincel p = juego.pincel;
         List<Cliente> cola = m.getCola();
         List<Ingrediente> plato = m.getPlato();
-        List<Ingrediente> ing = m.getDisponibles();
         Cliente actual = m.getEnAtencion();
         float t = p.getTiempo();
 
@@ -186,9 +276,9 @@ public class JuegoScreen extends PantallaBase {
             float bob = (float) Math.sin(t * 3f + i * 0.7f) * 1.5f;
             Dibujos.cliente(p, x + 48, y + 70 + bob, 18f, c.getAspecto(), animo);
 
-            // mini hamburguesa del pedido
+            // mini plato del pedido, con la forma de su tipo
             p.elipse(x + 121, y + 37, 27, 5, 0x1A1208, 0.18f);
-            Dibujos.hamburguesa(p, x + 121, y + 38, 55, 46, c.getReceta());
+            Dibujos.plato(p, c.getTipoPlato(), x + 121, y + 38, 55, 46, c.getReceta());
 
             Dibujos.barra(p, x + 12, y + 10, w - 24, 9, animo);
         }
@@ -206,12 +296,6 @@ public class JuegoScreen extends PantallaBase {
             p.textoCentrado("Nadie en el mostrador", 320, 338, 0xFFF3D6, 1.05f);
             p.textoCentrado("Pulsa ATENDER o ESPACIO", 320, 306, 0xFFD166, 0.82f);
         } else {
-            int aciertos = 0;
-            List<Ingrediente> receta = actual.getReceta();
-            while (aciertos < plato.size() && aciertos < receta.size() && plato.get(aciertos) == receta.get(aciertos)) {
-                aciertos++;
-            }
-
             p.texto("CLIENTE #" + actual.getNumero(), 40, 399, 0xFFD166, 0.72f);
             p.halo(100, 330, 60, 0xFFC24A, 0.18f);
             p.circulo(100, 330, 46, 0x3B2A1C, 0.95f);
@@ -221,35 +305,27 @@ public class JuegoScreen extends PantallaBase {
             p.texto("PACIENCIA", 36, 262, 0xD8B98A, 0.55f);
             Dibujos.barra(p, 34, 244, 132, 10, actual.fraccionPaciencia());
 
-            // comanda de papel
+            // comanda de papel: solo el nombre de la receta y una imagen del plato;
+            // la descripcion completa se busca en RECETAS para prepararla.
             float tx = 176, ty = 240, tw = 304, th = 158;
             p.panel(tx, ty, tw, th, 12, 0xFFF3D6, 0xD9B77A, 1f);
             p.redondeado(tx + 10, ty + th - 7, tw - 20, 2, 1, 0xFFFFFF, 0.40f);
-            p.texto("PEDIDO #" + actual.getNumero(), 190, 382, 0x4A3212, 0.95f);
+            p.texto("RECETA: " + actual.getNombreReceta(), 190, 364, 0x4A3212, 0.95f);
+            p.textoCentrado("Busca en RECETAS: " + actual.getNombreReceta(), tx + tw / 2f, 386,
+                    0x8A6A42, 0.62f);
+            Dibujos.plato(p, actual.getTipoPlato(), tx + tw / 2f, 298, 116, 70, actual.getReceta());
             p.redondeado(380, 369, 84, 21, 8, 0xF2B33D, 1f);
             p.textoCentrado("PAGA $" + actual.pagoBase(), 422, 379.5f, 0x3A2708, 0.62f);
-            for (int d = 0; d < 18; d++) {
-                p.rect(190 + d * 15.5f, 366, 8, 1.5f, 0xC9AE7E, 0.85f);
-            }
-
-            for (int i = 0; i < receta.size(); i++) {
-                float fila = 348 - i * 17f;
-                boolean hecha = i < aciertos;
-                Dibujos.icono(p, receta.get(i), 198, fila + 4, 18);
-                p.texto((i + 1) + ". " + receta.get(i).getNombre(), 214, fila,
-                        hecha ? 0x2E7D32 : 0x4A3212, 0.78f);
-                if (hecha) Dibujos.check(p, 456, fila + 4, 10, 0x2E7D32, 1f);
-            }
 
             String estado;
             int colorEstado;
             if (plato.isEmpty()) {
-                estado = "Arma el pedido de abajo hacia arriba";
+                estado = "Agrega ingredientes";
                 colorEstado = 0x8A6A42;
             } else if (!m.platoCoincide()) {
                 estado = "Algo no coincide: usa DESHACER";
                 colorEstado = 0xC0392B;
-            } else if (plato.size() == receta.size()) {
+            } else if (plato.size() == actual.getReceta().size()) {
                 estado = "Listo! Pulsa ENTREGAR";
                 colorEstado = 0x2E7D32;
             } else {
@@ -272,14 +348,15 @@ public class JuegoScreen extends PantallaBase {
         p.elipse(644, 248, 132, 20, 0x090502, 0.50f);
         p.elipse(644, 254, 132, 20, 0xE8E4D8);
         p.elipse(644, 257, 108, 14, 0xCBC5B6);
-        Dibujos.hamburguesa(p, 644, 260 + salto, 176, 138, plato);
+        TipoPlato tipoPlato = actual == null ? TipoPlato.HAMBURGUESA : actual.getTipoPlato();
+        Dibujos.plato(p, tipoPlato, 644, 260 + salto, 176, 138, plato);
 
         if (plato.isEmpty()) {
             p.textoCentrado(actual == null ? "Atiende a un cliente" : "Agrega ingredientes",
                     644, 330, 0xB6A98C, 0.88f);
         }
 
-        p.texto("CAPAS", 790, 399, 0xD8B98A, 0.55f);
+        p.texto("ORDEN", 790, 399, 0xD8B98A, 0.55f);
         for (int k = 0; k < Mundo.MAX_PLATO; k++) {
             float sy = 250 + k * 16f;
             boolean llena = k < plato.size();
@@ -318,9 +395,16 @@ public class JuegoScreen extends PantallaBase {
             p.redondeado(20, 185, 920, 27, 9, 0x0B0D13, 0.42f);
             p.rect(32, 210, 896, 1, 0xF2B33D, 0.22f);
             p.texto("INGREDIENTES", 30, 197, 0xD8C39A, 0.56f);
-            String cuenta = ing.size() + "/" + MAX_BOTONES;
+            String cuenta = m.getDespensa().getTamano() + "/" + Catalogo.TODOS.size();
             p.texto(cuenta, 928 - p.anchoTexto(cuenta, 0.56f), 197, 0xD8C39A, 0.56f);
-            if (ing.size() <= 6) {
+            int paginas = paginas(m);
+            if (paginas > 1) {
+                String pagina = "PAG " + (paginaIngredientes + 1) + "/" + paginas;
+                p.texto(pagina, 820 - p.anchoTexto(pagina, 0.52f), 197, 0x9AA0B4, 0.52f);
+                dibujarFlechaPagina(p, PAG_IZQ_X, false, paginaIngredientes > 0);
+                dibujarFlechaPagina(p, PAG_DER_X, true, paginaIngredientes + 1 < paginas);
+            }
+            if (m.getDia() == 1) {
                 String pista = "La tienda abre al terminar el dia";
                 float anchoPista = p.anchoTexto(pista, 0.62f);
                 float hx = 480 - anchoPista / 2f;
@@ -329,9 +413,9 @@ public class JuegoScreen extends PantallaBase {
             }
         }
         boolean puedeAgregar = actual != null && plato.size() < Mundo.MAX_PLATO;
-        for (int i = 0; i < ing.size() && i < MAX_BOTONES; i++) {
-            Dibujos.botonIngrediente(p, ing.get(i).getNombre(), bx(i), by(i), BW, BH, ing.get(i), puedeAgregar,
-                    String.valueOf((i + 1) % 10));
+        for (int i = 0; i < visibles.size(); i++) {
+            Dibujos.botonIngrediente(p, visibles.get(i).getNombre(), bx(i), by(i), BW, BH,
+                    visibles.get(i), puedeAgregar, etiquetaTecla(i));
         }
 
         // ---------------------------------------------------------- acciones
@@ -341,8 +425,10 @@ public class JuegoScreen extends PantallaBase {
                 actual == null && !cola.isEmpty(), 0, false);
         botonAccion(p, DESHACER_X, AY, AW, AH, "DESHACER", "RETROCESO", 0xF2994A,
                 !plato.isEmpty(), 1, false);
+        botonAccion(p, RECETAS_X, AY, AW, AH, "RECETAS", "R", 0xB69CF2,
+                true, 2, false);
         botonAccion(p, ENTREGAR_X, AY, AW, AH, "ENTREGAR", "ESPACIO", 0x6BCB77,
-                actual != null && !plato.isEmpty(), 2, listoParaEntregar);
+                actual != null && !plato.isEmpty(), 3, listoParaEntregar);
 
         // ---------------------------------------------------------- aviso de pocas vidas
         if (m.getVidas() <= 2) {
@@ -379,12 +465,23 @@ public class JuegoScreen extends PantallaBase {
         p.circulo(x + 34, y + dy + h / 2f, 17, 0x000000, 0.16f * alfa);
         if (icono == 0) Dibujos.campana(p, x + 34, y + dy + h / 2f, 30, tinta, alfa);
         else if (icono == 1) Dibujos.flechaIzquierda(p, x + 34, y + dy + h / 2f, 26, tinta, alfa);
+        else if (icono == 2) Dibujos.libro(p, x + 34, y + dy + h / 2f, 28, tinta, alfa);
         else Dibujos.check(p, x + 34, y + dy + h / 2f, 25, tinta, alfa);
 
-        p.textoCentrado(texto, x + w / 2f, y + dy + h / 2f + 1, tinta, 1.0f, alfa);
+        p.textoCentrado(texto, x + w / 2f - 6, y + dy + h / 2f + 1, tinta, 0.96f, alfa);
         p.setAlfa(alfa);
-        p.tecla(tecla, x + w - 37, y + dy + h / 2f);
+        p.tecla(tecla, x + w - 33, y + dy + h / 2f);
         p.setAlfa(1f);
+    }
+
+    /** Flecha de la paginacion de ingredientes; se enciende cuando hay una pagina en esa direccion. */
+    private void dibujarFlechaPagina(Pincel p, float cx, boolean derecha, boolean activa) {
+        boolean hover = activa && p.ratonDentro(cx - PAG_R, PAG_Y - PAG_R, PAG_R * 2, PAG_R * 2);
+        int color = activa ? (hover ? 0xFFE29A : 0xF2B33D) : 0x4A4F63;
+        p.circulo(cx, PAG_Y, PAG_R, 0x0B0D13, activa ? 0.9f : 0.5f);
+        p.circulo(cx, PAG_Y, PAG_R - 1.5f, color, activa ? 1f : 0.45f);
+        if (derecha) Dibujos.flechaDerecha(p, cx, PAG_Y, 21, 0x2A1B08, activa ? 1f : 0.5f);
+        else Dibujos.flechaIzquierda(p, cx, PAG_Y, 21, 0x2A1B08, activa ? 1f : 0.5f);
     }
 
     private void dibujarPausa(Pincel p, float t) {
@@ -394,9 +491,10 @@ public class JuegoScreen extends PantallaBase {
         p.textoCentradoContorno("PAUSA", 480, 410, 0xFFD166, 2.2f, 0x1A1208);
         p.textoCentrado("La paciencia de tus clientes esta en espera", 480, 372, 0xB9BED0, 0.78f);
 
-        float[] filas = {340, 308, 276, 244};
-        String[] teclas = {"ESPACIO", "RETROCESO", "1-0", "P"};
-        String[] textos = {"Atender / entregar", "Deshacer ingrediente", "Agregar ingrediente", "Continuar"};
+        float[] filas = {348, 320, 292, 264, 236};
+        String[] teclas = {"ESPACIO", "RETROCESO", "1-0, Q, E", "IZQ / DER", "R"};
+        String[] textos = {"Atender / entregar", "Deshacer ingrediente", "Agregar ingrediente",
+                "Cambiar pagina de ingredientes", "Ver recetas"};
         for (int i = 0; i < filas.length; i++) {
             p.tecla(teclas[i], 348, filas[i]);
             p.texto(textos[i], 390, filas[i] + 4, 0xFFF3D6, 0.78f);

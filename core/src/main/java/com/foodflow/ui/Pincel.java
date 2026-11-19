@@ -66,7 +66,7 @@ public class Pincel implements Disposable {
     }
 
     public void iniciar(Matrix4 proyeccion) {
-        tiempo += Math.min(Gdx.graphics.getDeltaTime(), 0.05f);
+        tiempo += Math.min(Gdx.graphics.getDeltaTime(), 0.05f);   // mismo tope de 50 ms que PantallaBase
         batch.setProjectionMatrix(proyeccion);
         batch.begin();
     }

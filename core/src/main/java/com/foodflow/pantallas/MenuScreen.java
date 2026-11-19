@@ -95,7 +95,7 @@ public class MenuScreen extends PantallaBase {
         p.rect(0, 0, 960, 46, 0x0E0B12, 0.76f);
         p.rect(0, 46, 960, 1.5f, 0xF2B33D, 0.35f);
         pista(p, "ESPACIO", "atender / entregar", 230, 23);
-        pista(p, "1-0", "ingredientes", 500, 23);
+        pista(p, "1-0, Q, E", "ingredientes", 500, 23);
         pista(p, "P", "pausa", 730, 23);
 
         terminarFrame();

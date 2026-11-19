@@ -3,6 +3,7 @@ package com.foodflow.logica;
 import com.foodflow.modelo.Aspecto;
 import com.foodflow.modelo.Cliente;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.Receta;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,7 +19,8 @@ import java.util.Stack;
  *
  *  - Queue<Cliente>        cola de llegada (FIFO). Si se llena o la paciencia se agota, el cliente se va.
  *  - Stack<Ingrediente>    plato en construcción (LIFO). deshacer() quita el último ingrediente.
- *  - ArrayList<Ingrediente> ingredientes disponibles; crece cuando el jugador compra en la tienda.
+ *  - ListaDoble<Ingrediente> despensa; sus nodos permiten recorrerla hacia adelante y hacia atrás.
+ *  - Recetario             diccionario de recetas; los clientes piden una receta completa.
  */
 public class Mundo {
     public enum Estado { JUGANDO, DIA_TERMINADO, FIN_JUEGO }
@@ -30,7 +32,7 @@ public class Mundo {
     public static final float DURACION_DIA = 90f;
 
     private final Random rnd;
-    private final ArrayList<Ingrediente> disponibles = Catalogo.iniciales();
+    private final ListaDoble<Ingrediente> disponibles = Catalogo.iniciales();
     private final Queue<Cliente> cola = new LinkedList<>();
     private final Stack<Ingrediente> plato = new Stack<>();
     private Cliente enAtencion;
@@ -44,6 +46,7 @@ public class Mundo {
     private int siguienteNumero = 1;
     private float tiempoDia = DURACION_DIA;
     private float relojLlegada = 1f;   // el primer cliente llega al segundo
+    private String ultimaReceta;       // para no repetir el mismo pedido dos veces seguidas
     private String mensaje = "";
     private float tiempoMensaje = 0f;
 
@@ -97,7 +100,8 @@ public class Mundo {
         if (cola.size() >= CAPACIDAD_COLA) {
             perderCliente("Local lleno: un cliente se fue");
         } else {
-            cola.offer(new Cliente(siguienteNumero++, generarReceta(), paciencia(), Aspecto.aleatorio(rnd)));
+            Receta receta = elegirReceta();
+            cola.offer(new Cliente(siguienteNumero++, receta, paciencia(), Aspecto.aleatorio(rnd)));
         }
     }
 
@@ -117,7 +121,7 @@ public class Mundo {
     /** Apila un ingrediente en el plato. */
     public boolean agregarIngrediente(Ingrediente ingrediente) {
         if (estado != Estado.JUGANDO || enAtencion == null) return false;
-        if (!disponibles.contains(ingrediente)) return false;
+        if (!disponibles.contiene(ingrediente)) return false;
         if (plato.size() >= MAX_PLATO) { avisar("El plato esta lleno"); return false; }
         plato.push(ingrediente);
         return true;
@@ -150,12 +154,12 @@ public class Mundo {
         return Entrega.INCORRECTA;
     }
 
-    /** Compra un ingrediente nuevo (solo entre días). Se agrega al arreglo dinámico. */
+    /** Compra un ingrediente nuevo (solo entre días). Se agrega al final de la lista doble. */
     public boolean comprar(Ingrediente ingrediente) {
         if (estado != Estado.DIA_TERMINADO) return false;
-        if (disponibles.contains(ingrediente) || monedas < ingrediente.getCosto()) return false;
+        if (disponibles.contiene(ingrediente) || monedas < ingrediente.getCosto()) return false;
         monedas -= ingrediente.getCosto();
-        disponibles.add(ingrediente);
+        disponibles.agregar(ingrediente);
         return true;
     }
 
@@ -185,14 +189,16 @@ public class Mundo {
     public List<Ingrediente> ingredientesPorComprar() {
         List<Ingrediente> lista = new ArrayList<>();
         for (Ingrediente i : Catalogo.TODOS) {
-            if (!disponibles.contains(i)) lista.add(i);
+            if (!disponibles.contiene(i)) lista.add(i);
         }
         return lista;
     }
 
-    public List<Ingrediente> getDisponibles() { return Collections.unmodifiableList(disponibles); }
+    public List<Ingrediente> getDisponibles() { return disponibles.aLista(); }
+    /** Lista enlazada de la despensa; la pantalla la recorre por nodos para paginar. */
+    public ListaDoble<Ingrediente> getDespensa() { return disponibles; }
     public List<Cliente> getCola() { return new ArrayList<>(cola); }   // copia, en orden de llegada
-    public List<Ingrediente> getPlato() { return Collections.unmodifiableList(plato); } // de abajo hacia arriba
+    public List<Ingrediente> getPlato() { return Collections.unmodifiableList(plato); } // en orden de la receta
     public Cliente getEnAtencion() { return enAtencion; }
     public Estado getEstado() { return estado; }
     public int getDia() { return dia; }
@@ -221,16 +227,15 @@ public class Mundo {
     private float intervaloLlegada() { return Math.max(4f, 10f - 0.8f * (dia - 1)); }
     private float paciencia() { return Math.max(20f, 45f - 4f * (dia - 1)); }
 
-    /** Pan abajo, 1 a 4 ingredientes (según el día) tomados del arreglo disponible, Pan arriba. */
-    private List<Ingrediente> generarReceta() {
-        List<Ingrediente> extras = new ArrayList<>(disponibles);
-        extras.remove(Catalogo.PAN);
-        int maxExtras = Math.min(1 + (dia + 1) / 2, 4);
-        int n = 1 + rnd.nextInt(maxExtras);
-        List<Ingrediente> receta = new ArrayList<>();
-        receta.add(Catalogo.PAN);
-        for (int i = 0; i < n; i++) receta.add(extras.get(rnd.nextInt(extras.size())));
-        receta.add(Catalogo.PAN);
+    /** Elige una receta del diccionario que se pueda preparar con la despensa actual. */
+    private Receta elegirReceta() {
+        List<Receta> posibles = Recetario.disponibles(disponibles.aLista());
+        if (posibles.isEmpty()) return Recetario.receta(Recetario.RECETA_BASICA);
+        if (posibles.size() > 1) {
+            posibles.removeIf(receta -> receta.getNombre().equals(ultimaReceta));
+        }
+        Receta receta = posibles.get(rnd.nextInt(posibles.size()));
+        ultimaReceta = receta.getNombre();
         return receta;
     }
 }

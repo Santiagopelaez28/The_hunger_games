@@ -74,7 +74,7 @@ set CLASSPATH=%APP_HOME%\lib\lwjgl3-1.0.jar;%APP_HOME%\lib\core-1.0.jar;%APP_HOM
 
 
 @rem Execute lwjgl3
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %LWJGL3_OPTS%  -classpath "%CLASSPATH%" com.foodflow.lwjgl3.Lwjgl3Launcher %*
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %LWJGL3_OPTS%  -classpath "%CLASSPATH%" com.foodflow.lwjgl3.Capturas %*
 
 :end
 @rem End local scope for the variables with windows NT shell

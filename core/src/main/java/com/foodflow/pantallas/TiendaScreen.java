@@ -10,10 +10,11 @@ import com.foodflow.ui.Pincel;
 
 import java.util.List;
 
-/** Entre un dia y otro: se compran ingredientes que se agregan al arreglo dinamico de disponibles. */
+/** Entre un dia y otro: se compran ingredientes que se agregan a la lista doble de disponibles. */
 public class TiendaScreen extends PantallaBase {
     private static final float TARJETA_W = 214, TARJETA_H = 84;
     private static final float SIGUIENTE_X = 330, SIGUIENTE_Y = 136, SIGUIENTE_W = 300, SIGUIENTE_H = 56;
+    private static final float RECETAS_X = 690, RECETAS_Y = 136, RECETAS_W = 220, RECETAS_H = 56;
 
     private String aviso = "";
     private float tiempoAviso = 0f;
@@ -21,11 +22,15 @@ public class TiendaScreen extends PantallaBase {
     public TiendaScreen(FoodFlowGame juego) { super(juego); }
 
     private static float tx(int i) { return 32 + (i % 4) * 232; }
-    private static float ty(int i) { return 320 - (i / 4) * 94; }
+    private static float ty(int i) { return 300 - (i / 4) * 94; }
 
     private void siguienteDia() {
         juego.mundo.siguienteDia();
         juego.setScreen(new JuegoScreen(juego));
+    }
+
+    private void abrirRecetario() {
+        juego.setScreen(new RecetasScreen(juego, RecetasScreen.Origen.TIENDA));
     }
 
     @Override
@@ -35,7 +40,12 @@ public class TiendaScreen extends PantallaBase {
         if (tiempoAviso > 0) tiempoAviso -= dt;
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) { siguienteDia(); return; }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) { abrirRecetario(); return; }
         if (hayClick()) {
+            if (dentro(toque, RECETAS_X, RECETAS_Y, RECETAS_W, RECETAS_H)) {
+                abrirRecetario();
+                return;
+            }
             if (dentro(toque, SIGUIENTE_X, SIGUIENTE_Y, SIGUIENTE_W, SIGUIENTE_H)) {
                 siguienteDia();
                 return;
@@ -77,12 +87,13 @@ public class TiendaScreen extends PantallaBase {
         dibujarEstadistica(p, 710, 460, "MONEDAS", "$" + m.getMonedas(), 3, 0xFFD166);
 
         // ---------------------------------------------------------- despensa
+        // Hasta 16 ingredientes en dos filas de 8; la lista doble crece al comprar.
         List<Ingrediente> tienes = m.getDisponibles();
         for (int i = 0; i < tienes.size(); i++) {
-            float x = 50 + i * 88, y = 414;
-            p.panel(x, y, 84, 26, 9, 0x1B1F2E, 0x3E4560, 0.96f);
-            Dibujos.icono(p, tienes.get(i), x + 17, y + 13, 22);
-            p.texto(tienes.get(i).getNombre(), x + 31, y + 17, 0xE8E2D2, 0.56f);
+            float x = 20 + (i % 8) * 116, y = 422 - (i / 8) * 30;
+            p.panel(x, y, 112, 26, 9, 0x1B1F2E, 0x3E4560, 0.96f);
+            Dibujos.icono(p, tienes.get(i), x + 13, y + 13, 18);
+            p.texto(tienes.get(i).getNombre(), x + 24, y + 17, 0xE8E2D2, 0.42f);
         }
 
         // ---------------------------------------------------------- tienda
@@ -103,6 +114,8 @@ public class TiendaScreen extends PantallaBase {
         p.boton("COMENZAR DIA " + (m.getDia() + 1), SIGUIENTE_X, SIGUIENTE_Y, SIGUIENTE_W, SIGUIENTE_H,
                 0x6BCB77, true, false);
         p.tecla("ENTER", SIGUIENTE_X + SIGUIENTE_W - 42, SIGUIENTE_Y + SIGUIENTE_H / 2f);
+        p.boton("RECETAS", RECETAS_X, RECETAS_Y, RECETAS_W, RECETAS_H, 0xB69CF2, true, false);
+        p.tecla("R", RECETAS_X + RECETAS_W - 38, RECETAS_Y + RECETAS_H / 2f);
 
         // ---------------------------------------------------------- aviso / ayuda
         if (tiempoAviso > 0 && !aviso.isEmpty()) {
@@ -110,7 +123,7 @@ public class TiendaScreen extends PantallaBase {
             p.panel(480 - ancho / 2f, 94, ancho, 30, 15, 0x16131E, 0xFFC24A, 0.97f);
             p.textoCentrado(aviso, 480, 110, 0xFFF3D6, 0.8f);
         } else {
-            p.textoCentrado("Click en un ingrediente para comprarlo   |   ENTER para seguir",
+            p.textoCentrado("Click en un ingrediente para comprarlo   |   R para ver recetas   |   ENTER para seguir",
                     480, 100, 0xB9BED0, 0.72f);
         }
 
