@@ -5,12 +5,10 @@ para prepararla y compras ingredientes nuevos entre un día y otro.
 
 ## Cómo ejecutarlo
 
-Necesitas JDK 17 o superior (el proyecto compila con `release 17`).
+Requiere JDK 17 (Necesario para Gradle).
 
-    ./gradlew lwjgl3:run          (Windows: gradlew.bat lwjgl3:run)
-
+    ./gradlew lwjgl3:run
 La primera vez Gradle descarga LibGDX, así que necesita internet.
-En IntelliJ IDEA: *Open* sobre esta carpeta y ejecuta `Lwjgl3Launcher`.
 
 ## Controles
 
