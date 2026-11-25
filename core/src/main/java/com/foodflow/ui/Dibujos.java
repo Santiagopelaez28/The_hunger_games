@@ -544,107 +544,416 @@ public final class Dibujos {
      * 'animo' va de 1 (recién llegó, sonríe) a 0 (a punto de irse, enojado).
      */
     public static void cliente(Pincel p, float cx, float cy, float s, Aspecto a, float animo) {
+
         int piel = a.getPiel();
         int pelo = a.getPelo();
         int camisa = a.getCamisa();
 
-        // cuerpo
-        p.circulo(cx - 0.9f * s, cy - 2.0f * s, 0.9f * s, camisa);
-        p.circulo(cx + 0.9f * s, cy - 2.0f * s, 0.9f * s, camisa);
-        p.rect(cx - 0.9f * s, cy - 2.9f * s, 1.8f * s, 1.8f * s, camisa);
-        p.rect(cx - 1.8f * s, cy - 2.9f * s, 3.6f * s, 0.9f * s, camisa);
-        p.rect(cx - 0.32f * s, cy - 1.3f * s, 0.64f * s, 0.5f * s, mezclar(piel, 0.88f));   // cuello
+        int peinado = a.getPeinado();
+        int accesorio = a.getAccesorio();
 
-        // pelo de atrás
-        if (a.getPeinado() == 1) {
-            p.circulo(cx, cy + 0.05f * s, 1.12f * s, pelo);
-            p.rect(cx - 1.12f * s, cy - 1.7f * s, 2.24f * s, 1.75f * s, pelo);
-        } else if (a.getPeinado() == 2) {
-            p.circulo(cx, cy + 0.25f * s, 1.38f * s, pelo);
-        } else if (a.getPeinado() == 3) {
-            p.circulo(cx - 0.9f * s, cy + 0.05f * s, 0.3f * s, pelo);
-            p.circulo(cx + 0.9f * s, cy + 0.05f * s, 0.3f * s, pelo);
+        animo = Math.max(0f, Math.min(1f, animo));
+
+        // =====================================================
+        // 1. CUERPO Y CUELLO
+        // =====================================================
+
+        // Cuerpo con bordes redondeados
+        p.redondeado(
+            cx - 1.35f * s,
+            cy - 3.10f * s,
+            2.70f * s,
+            1.85f * s,
+            0.42f * s,
+            camisa
+        );
+
+        // Cuello
+        p.redondeado(
+            cx - 0.30f * s,
+            cy - 1.60f * s,
+            0.60f * s,
+            0.72f * s,
+            0.15f * s,
+            mezclar(piel, 0.92f)
+        );
+
+        // =====================================================
+        // 2. CABELLO DE ATRÁS
+        // =====================================================
+
+        // Cabello largo
+        if (peinado == 1 || peinado == 4) {
+
+            p.redondeado(
+                cx - 0.98f * s,
+                cy - 1.15f * s,
+                0.42f * s,
+                1.75f * s,
+                0.18f * s,
+                pelo
+            );
+
+            p.redondeado(
+                cx + 0.56f * s,
+                cy - 1.15f * s,
+                0.42f * s,
+                1.75f * s,
+                0.18f * s,
+                pelo
+            );
         }
 
-        // orejas y cabeza
-        p.circulo(cx - 1.0f * s, cy - 0.1f * s, 0.2f * s, mezclar(piel, 0.9f));
-        p.circulo(cx + 1.0f * s, cy - 0.1f * s, 0.2f * s, mezclar(piel, 0.9f));
-        p.circulo(cx, cy, s, piel);
-
-        // pelo de adelante: un círculo de pelo y encima la cara "recortada" con piel
-        switch (a.getPeinado()) {
-            case 0:
-            case 1:
-            case 4:
-                p.circulo(cx, cy + 0.42f * s, 1.03f * s, pelo);
-                p.circulo(cx, cy - 0.07f * s, 0.93f * s, piel);
-                if (a.getPeinado() == 4) p.circulo(cx, cy + 1.3f * s, 0.45f * s, pelo);   // moño
-                break;
-            case 2:
-                p.circulo(cx, cy + 0.55f * s, 1.12f * s, pelo);
-                p.circulo(cx, cy - 0.1f * s, 0.9f * s, piel);
-                p.circulo(cx - 0.7f * s, cy + 1.35f * s, 0.36f * s, pelo);
-                p.circulo(cx + 0.7f * s, cy + 1.35f * s, 0.36f * s, pelo);
-                p.circulo(cx, cy + 1.55f * s, 0.36f * s, pelo);
-                break;
-            default:   // calvo: solo un brillo en la cabeza (los pelitos de los lados van atras)
-                p.circulo(cx - 0.35f * s, cy + 0.6f * s, 0.18f * s, mezclar(piel, 1.12f));
-                break;
+        // Moño detrás de la cabeza
+        if (peinado == 4) {
+            p.circulo(
+                cx + 0.48f * s,
+                cy + 0.92f * s,
+                0.36f * s,
+                pelo
+            );
         }
 
-        // gafas (antes que los ojos)
-        float ojoY = cy + 0.12f * s;
-        if (a.getAccesorio() == 2) {
-            float gw = 0.62f * s, gh = 0.46f * s;
-            for (int lado = -1; lado <= 1; lado += 2) {
-                float gx = cx + lado * 0.38f * s;
-                p.rect(gx - gw / 2f - 0.05f * s, ojoY - gh / 2f - 0.05f * s, gw + 0.1f * s, gh + 0.1f * s, 0x2B2B2B);
-                p.rect(gx - gw / 2f, ojoY - gh / 2f, gw, gh, 0xCFE8FF);
+        // =====================================================
+        // 3. OREJAS Y CABEZA
+        // =====================================================
+
+        p.circulo(
+            cx - 0.84f * s,
+            cy - 0.05f * s,
+            0.19f * s,
+            mezclar(piel, 0.90f)
+        );
+
+        p.circulo(
+            cx + 0.84f * s,
+            cy - 0.05f * s,
+            0.19f * s,
+            mezclar(piel, 0.90f)
+        );
+
+        // Cabeza ligeramente ovalada
+        p.elipse(
+            cx,
+            cy,
+            0.84f * s,
+            1.00f * s,
+            piel
+        );
+
+        // =====================================================
+        // 4. CABELLO DE ADELANTE
+        // =====================================================
+
+        // Corto, largo y moño
+        if (peinado == 0 || peinado == 1 || peinado == 4) {
+
+            cupula(
+                p,
+                cx,
+                cy + 0.32f * s,
+                1.86f * s,
+                0.68f * s,
+                pelo
+            );
+        }
+
+        // Rizado: rizos pequeños y conectados
+        else if (peinado == 2) {
+
+            for (int k = -2; k <= 2; k++) {
+
+                p.circulo(
+                    cx + k * 0.32f * s,
+                    cy + 0.73f * s,
+                    0.29f * s,
+                    pelo
+                );
             }
-            p.rect(cx - 0.1f * s, ojoY - 0.03f * s, 0.2f * s, 0.06f * s, 0x2B2B2B);
+
+            // Rizos laterales
+            p.circulo(
+                cx - 0.77f * s,
+                cy + 0.35f * s,
+                0.24f * s,
+                pelo
+            );
+
+            p.circulo(
+                cx + 0.77f * s,
+                cy + 0.35f * s,
+                0.24f * s,
+                pelo
+            );
         }
 
-        // ojos
-        p.circulo(cx - 0.38f * s, ojoY, 0.11f * s, OSCURO);
-        p.circulo(cx + 0.38f * s, ojoY, 0.11f * s, OSCURO);
+        // Calvo: pequeño brillo en la cabeza
+        else if (peinado == 3) {
 
-        // cejas: enojado = inclinadas hacia el centro
-        int ceja = mezclar(pelo, 0.8f);
+            p.elipse(
+                    cx - 0.30f * s,
+                    cy + 0.48f * s,
+                    0.12f * s,
+                    0.07f * s,
+                    mezclar(piel, 1.10f)
+            );
+        }
+
+        // =====================================================
+        // 5. OJOS Y GAFAS
+        // =====================================================
+
+        float ojoY = cy + 0.12f * s;
+
+        // Gafas
+        if (accesorio == 2) {
+
+            for (int lado = -1; lado <= 1; lado += 2) {
+
+                float gx = cx + lado * 0.34f * s;
+
+                // Marco exterior
+                p.redondeado(
+                        gx - 0.31f * s,
+                        ojoY - 0.21f * s,
+                        0.62f * s,
+                        0.42f * s,
+                        0.10f * s,
+                        0x292B35
+                );
+
+                // Cristal
+                p.redondeado(
+                        gx - 0.26f * s,
+                        ojoY - 0.16f * s,
+                        0.52f * s,
+                        0.32f * s,
+                        0.08f * s,
+                        0xCFE8FF,
+                        0.85f
+                );
+            }
+
+            // Unión de las gafas
+            p.rect(
+                    cx - 0.10f * s,
+                    ojoY - 0.03f * s,
+                    0.20f * s,
+                    0.07f * s,
+                    0x292B35
+            );
+        }
+
+        // Ojos
+        for (int lado = -1; lado <= 1; lado += 2) {
+
+            float ojoX = cx + lado * 0.34f * s;
+
+            p.circulo(
+                    ojoX,
+                    ojoY,
+                    0.12f * s,
+                    0xFFF9ED
+            );
+
+            p.circulo(
+                    ojoX + 0.02f * s,
+                    ojoY,
+                    0.065f * s,
+                    OSCURO
+            );
+        }
+
+        // =====================================================
+        // 6. CEJAS
+        // =====================================================
+
+        int ceja = mezclar(pelo, 0.80f);
+
         if (animo < 0.25f) {
-            p.rect(cx - 0.62f * s, cy + 0.38f * s, 0.22f * s, 0.1f * s, ceja);
-            p.rect(cx - 0.42f * s, cy + 0.32f * s, 0.22f * s, 0.1f * s, ceja);
-            p.rect(cx + 0.40f * s, cy + 0.38f * s, 0.22f * s, 0.1f * s, ceja);
-            p.rect(cx + 0.20f * s, cy + 0.32f * s, 0.22f * s, 0.1f * s, ceja);
+
+            // Expresión de enojo
+            p.rectRotado(
+                    cx - 0.37f * s,
+                    cy + 0.40f * s,
+                    0.34f * s,
+                    0.075f * s,
+                    -18f,
+                    ceja,
+                    1f
+            );
+
+            p.rectRotado(
+                    cx + 0.37f * s,
+                    cy + 0.40f * s,
+                    0.34f * s,
+                    0.075f * s,
+                    18f,
+                    ceja,
+                    1f
+
+            );
+
         } else {
-            float alto = animo > 0.55f ? 0.44f : 0.38f;
-            p.rect(cx - 0.65f * s, cy + alto * s, 0.45f * s, 0.09f * s, ceja);
-            p.rect(cx + 0.20f * s, cy + alto * s, 0.45f * s, 0.09f * s, ceja);
+
+            // Expresión tranquila
+            p.rectRotado(
+                    cx - 0.36f * s,
+                    cy + 0.43f * s,
+                    0.32f * s,
+                    0.065f * s,
+                    5f,
+                    ceja,
+                    1f
+            );
+
+            p.rectRotado(
+                    cx + 0.36f * s,
+                    cy + 0.43f * s,
+                    0.32f * s,
+                    0.065f * s,
+                    -5f,
+                    ceja,
+                    1f
+            );
         }
 
-        // boca: sonrisa, neutral o ceño fruncido (un círculo oscuro "recortado" con otro de piel)
+        // =====================================================
+        // 7. NARIZ
+        // =====================================================
+
+        p.elipse(
+                cx,
+                cy - 0.13f * s,
+                0.055f * s,
+                0.075f * s,
+                mezclar(piel, 0.82f)
+        );
+
+        // =====================================================
+        // 8. BOCA Y EXPRESIÓN
+        // =====================================================
+
         int boca = 0x7A2E2E;
+
         if (animo > 0.55f) {
-            p.circulo(cx, cy - 0.38f * s, 0.3f * s, boca);
-            p.circulo(cx, cy - 0.21f * s, 0.3f * s, piel);
-            p.setAlfa(0.45f);
-            p.circulo(cx - 0.62f * s, cy - 0.2f * s, 0.15f * s, 0xFF7A7A);
-            p.circulo(cx + 0.62f * s, cy - 0.2f * s, 0.15f * s, 0xFF7A7A);
-            p.setAlfa(1f);
+
+            // Sonrisa
+            p.circulo(
+                    cx,
+                    cy - 0.42f * s,
+                    0.23f * s,
+                    boca
+            );
+
+            p.circulo(
+                    cx,
+                    cy - 0.29f * s,
+                    0.23f * s,
+                    piel
+            );
+
+            // Mejillas
+            p.circulo(
+                    cx - 0.58f * s,
+                    cy - 0.23f * s,
+                    0.12f * s,
+                    0xFF7A7A,
+                    0.45f
+            );
+
+            p.circulo(
+                    cx + 0.58f * s,
+                    cy - 0.23f * s,
+                    0.12f * s,
+                    0xFF7A7A,
+                    0.45f
+            );
+
         } else if (animo > 0.25f) {
-            p.rect(cx - 0.22f * s, cy - 0.42f * s, 0.44f * s, 0.08f * s, boca);
+
+            // Boca neutral
+            p.redondeado(
+                    cx - 0.19f * s,
+                    cy - 0.45f * s,
+                    0.38f * s,
+                    0.07f * s,
+                    0.035f * s,
+                    boca
+            );
+
         } else {
-            p.circulo(cx, cy - 0.55f * s, 0.3f * s, boca);
-            p.circulo(cx, cy - 0.72f * s, 0.3f * s, piel);
+
+            // Boca de enojo
+            p.circulo(
+                    cx,
+                    cy - 0.48f * s,
+                    0.22f * s,
+                    boca
+            );
+
+            p.circulo(
+                    cx,
+                    cy - 0.61f * s,
+                    0.22f * s,
+                    piel
+            );
         }
 
-        // bigote (después de la boca) y gorra
-        if (a.getAccesorio() == 3) {
-            pildora(p, cx - 0.5f * s, cy - 0.22f * s, 1.0f * s, 0.2f * s, mezclar(pelo, 0.7f));
-        } else if (a.getAccesorio() == 1) {
+        // =====================================================
+        // 9. ACCESORIOS
+        // =====================================================
+
+        // Bigote
+        if (accesorio == 3) {
+
+            p.circulo(
+                    cx - 0.15f * s,
+                    cy - 0.29f * s,
+                    0.15f * s,
+                    mezclar(pelo, 0.70f)
+            );
+
+            p.circulo(
+                    cx + 0.15f * s,
+                    cy - 0.29f * s,
+                    0.15f * s,
+                    mezclar(pelo, 0.70f)
+            );
+        }
+
+        // Gorra
+        else if (accesorio == 1) {
+
             int col = a.getColorAccesorio();
-            cupula(p, cx, cy + 0.42f * s, 2.1f * s, 0.85f * s, col);
-            p.rect(cx - 1.05f * s, cy + 0.38f * s, 2.1f * s, 0.14f * s, mezclar(col, 0.8f));
-            p.rect(cx + 0.1f * s, cy + 0.34f * s, 1.35f * s, 0.15f * s, mezclar(col, 0.7f));
+
+            cupula(
+                    p,
+                    cx,
+                    cy + 0.40f * s,
+                    1.95f * s,
+                    0.63f * s,
+                    col
+            );
+
+            // Visera
+            p.redondeado(
+                    cx - 1.00f * s,
+                    cy + 0.35f * s,
+                    2.00f * s,
+                    0.14f * s,
+                    0.07f * s,
+                    mezclar(col, 0.80f)
+            );
+
+            p.redondeado(
+                    cx + 0.05f * s,
+                    cy + 0.25f * s,
+                    1.05f * s,
+                    0.14f * s,
+                    0.07f * s,
+                    mezclar(col, 0.70f)
+            );
         }
     }
 }

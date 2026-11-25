@@ -29,7 +29,7 @@ public class Mundo {
     public static final int CAPACIDAD_COLA = 5;
     public static final int MAX_PLATO = 8;
     public static final int VIDAS_INICIALES = 5;
-    public static final float DURACION_DIA = 90f;
+    public static final float DURACION_DIA = 70f;
 
     private final Random rnd;
     private final ListaDoble<Ingrediente> disponibles = Catalogo.iniciales();
