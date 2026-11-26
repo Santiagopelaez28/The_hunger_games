@@ -258,10 +258,15 @@ public class JuegoScreen extends PantallaBase {
                 p.halo(x + w / 2f, y + h / 2f, 92f, 0xFF6B6B, 0.16f + 0.10f * (float) Math.sin(t * 8f));
             }
 
-            p.panel(x, y, w, h, 16, siguiente ? 0xFFF0CC : 0xFFF7E6,
-                    siguiente ? 0xFFC24A : 0xD9C79B, 0.98f);
+            boolean vip = c != null && c.isVip();
+            int fondo = vip ? 0xF3E5FF : (siguiente ? 0xFFF0CC : 0xFFF7E6);
+            int borde = vip ? 0x9B51E0 : (siguiente ? 0xFFC24A : 0xD9C79B);
+            p.panel(x, y, w, h, 16, fondo, borde, 0.98f);
 
-            if (siguiente) {
+            if (vip) {
+                p.redondeado(x + w - 104, y + h - 25, 96, 17, 6, 0x9B51E0, 1f);
+                p.textoCentrado("CLIENTE VIP", x + w - 56, y + h - 16.5f, 0xFFFFFF, 0.52f);
+            } else if (siguiente) {
                 p.redondeado(x + w - 94, y + h - 25, 86, 17, 6, 0xF2B33D, 1f);
                 p.textoCentrado("SIGUIENTE", x + w - 51, y + h - 16.5f, 0x3A2708, 0.55f);
             }
