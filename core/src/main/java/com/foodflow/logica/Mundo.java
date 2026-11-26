@@ -8,19 +8,19 @@ import com.foodflow.modelo.Receta;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 
 /**
- * Reglas del juego, sin nada de LibGDX (se puede probar sin abrir ventana).
+ - Reglas del juego, sin nada de LibGDX (se puede probar sin abrir ventana).
  *
- *  - Queue<Cliente>        cola de llegada (FIFO). Si se llena o la paciencia se agota, el cliente se va.
- *  - Stack<Ingrediente>    plato en construcción (LIFO). deshacer() quita el último ingrediente.
- *  - ListaDoble<Ingrediente> despensa; sus nodos permiten recorrerla hacia adelante y hacia atrás.
- *  - Recetario             diccionario de recetas; los clientes piden una receta completa.
+ -  - PriorityQueue<Cliente> cola de llegada con prioridad VIP. Si se llena o la paciencia se agota, el cliente se va.
+ -  - Stack<Ingrediente>     plato en construcción (LIFO). deshacer() quita el último ingrediente.
+ -  - ListaDoble<Ingrediente>  despensa; sus nodos permiten recorrerla hacia adelante y hacia atrás.
+ -  - Recetario              diccionario de recetas; los clientes piden una receta completa.
  */
 public class Mundo {
     public enum Estado { JUGANDO, DIA_TERMINADO, FIN_JUEGO }
@@ -29,11 +29,11 @@ public class Mundo {
     public static final int CAPACIDAD_COLA = 5;
     public static final int MAX_PLATO = 8;
     public static final int VIDAS_INICIALES = 5;
-    public static final float DURACION_DIA = 70f;
+    public static final float DURACION_DIA = 110f;
 
     private final Random rnd;
     private final ListaDoble<Ingrediente> disponibles = Catalogo.iniciales();
-    private final Queue<Cliente> cola = new LinkedList<>();
+    private final Queue<Cliente> cola = new PriorityQueue<>();
     private final Stack<Ingrediente> plato = new Stack<>();
     private Cliente enAtencion;
 
@@ -101,13 +101,18 @@ public class Mundo {
             perderCliente("Local lleno: un cliente se fue");
         } else {
             Receta receta = elegirReceta();
-            cola.offer(new Cliente(siguienteNumero++, receta, paciencia(), Aspecto.aleatorio(rnd)));
+            // Los primeros 2 clientes son normales; del 3ro en adelante pueden llegar VIP
+            boolean esVip = siguienteNumero > 2 && rnd.nextFloat() < 0.37f;
+            cola.offer(new Cliente(siguienteNumero++, receta, paciencia(), Aspecto.aleatorio(rnd), esVip));
+            if (esVip) {
+                avisar("Llego un cliente VIP!");
+            }
         }
     }
 
     // ---------------------------------------------------------------- acciones del jugador
 
-    /** Saca al primero de la cola (el que llegó antes) y lo pone en el mostrador. */
+    /** Saca al de mayor prioridad de la cola (VIP primero, luego orden de llegada) y lo pone en el mostrador. */
     public boolean atenderSiguiente() {
         if (estado != Estado.JUGANDO) return false;
         if (enAtencion != null) { avisar("Termina primero el pedido actual"); return false; }
@@ -197,7 +202,11 @@ public class Mundo {
     public List<Ingrediente> getDisponibles() { return disponibles.aLista(); }
     /** Lista enlazada de la despensa; la pantalla la recorre por nodos para paginar. */
     public ListaDoble<Ingrediente> getDespensa() { return disponibles; }
-    public List<Cliente> getCola() { return new ArrayList<>(cola); }   // copia, en orden de llegada
+    public List<Cliente> getCola() {
+        List<Cliente> ordenada = new ArrayList<>(cola);
+        Collections.sort(ordenada);
+        return ordenada;
+    }   // copia ordenada por prioridad VIP y orden de llegada
     public List<Ingrediente> getPlato() { return Collections.unmodifiableList(plato); } // en orden de la receta
     public Cliente getEnAtencion() { return enAtencion; }
     public Estado getEstado() { return estado; }
@@ -224,8 +233,8 @@ public class Mundo {
     }
 
     /** Dificultad: cada día llegan más rápido y con menos paciencia. */
-    private float intervaloLlegada() { return Math.max(4f, 10f - 0.8f * (dia - 1)); }
-    private float paciencia() { return Math.max(20f, 45f - 4f * (dia - 1)); }
+    private float intervaloLlegada() { return Math.max(5f, 12f - 0.8f * (dia - 1)); }
+    private float paciencia() { return Math.max(40f, 80f - 3f * (dia - 1)); }
 
     /** Elige una receta del diccionario que se pueda preparar con la despensa actual. */
     private Receta elegirReceta() {
