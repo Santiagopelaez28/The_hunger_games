@@ -37,10 +37,10 @@ public class MenuScreen extends PantallaBase {
         float t = p.getTiempo();
 
         // ---------------------------------------------------------- fondo
-        p.imagenCubriendo(juego.fondoMenu, 0, 0, 960, 600, 0.5f, 0.32f, 0x2C2233);
-        p.rect(0, 0, 960, 600, 0x2A1620, 0.10f);
-        p.degradadoAlpha(0, 330, 960, 270, 0x120E18, 0f, 0.78f);
-        p.degradadoAlpha(0, 0, 960, 90, 0x120E18, 0.72f, 0f);
+        p.imagenCubriendo(juego.fondoMenu, 0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0.5f, 0.32f, 0x2C2233);
+        p.rect(0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0x2A1620, 0.10f);
+        p.degradadoAlpha(0, 330, FoodFlowGame.ANCHO, 270, 0x120E18, 0f, 0.78f);
+        p.degradadoAlpha(0, 0, FoodFlowGame.ANCHO, 90, 0x120E18, 0.72f, 0f);
         p.halo(480, 522, 200, 0xFFB347, 0.28f + 0.05f * (float) Math.sin(t * 1.5f));
 
         // ---------------------------------------------------------- hamburguesa estrella
@@ -92,8 +92,8 @@ public class MenuScreen extends PantallaBase {
         p.textoCentradoSombra("Compra ingredientes nuevos entre un dia y otro", 480, 340, 0xE8D7A8, 0.74f);
 
         // ---------------------------------------------------------- barra de controles
-        p.rect(0, 0, 960, 46, 0x0E0B12, 0.76f);
-        p.rect(0, 46, 960, 1.5f, 0xF2B33D, 0.35f);
+        p.rect(0, 0, FoodFlowGame.ANCHO, 46, 0x0E0B12, 0.76f);
+        p.rect(0, 46, FoodFlowGame.ANCHO, 1.5f, 0xF2B33D, 0.35f);
         pista(p, "ESPACIO", "atender / entregar", 230, 23);
         pista(p, "1-0, Q, E", "ingredientes", 500, 23);
         pista(p, "P", "pausa", 730, 23);
