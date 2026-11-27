@@ -61,10 +61,10 @@ public class RecetasScreen extends PantallaBase {
         float t = p.getTiempo();
 
         // ---------------------------------------------------------- fondo
-        p.imagenCubriendo(juego.fondoMenu, 0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0.5f, 0.30f, 0x2C2233);
-        p.rect(0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0x140E1E, 0.34f);
-        p.degradadoAlpha(0, 300, FoodFlowGame.ANCHO, 300, 0x120E18, 0f, 0.82f);
-        p.degradadoAlpha(0, 0, FoodFlowGame.ANCHO, 130, 0x120E18, 0.72f, 0f);
+        p.imagenCubriendo(juego.fondoMenu, 0, 0, 960, 600, 0.5f, 0.30f, 0x2C2233);
+        p.rect(0, 0, 960, 600, 0x140E1E, 0.34f);
+        p.degradadoAlpha(0, 300, 960, 300, 0x120E18, 0f, 0.82f);
+        p.degradadoAlpha(0, 0, 960, 130, 0x120E18, 0.72f, 0f);
         p.halo(480, 545, 220, 0xFFB347, 0.15f + 0.03f * (float) Math.sin(t * 1.5f));
 
         // ---------------------------------------------------------- cabecera
