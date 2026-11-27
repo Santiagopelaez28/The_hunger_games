@@ -265,10 +265,64 @@ public final class Dibujos {
             p.circulo(cx - w * 0.18f, cy + h * 0.05f, w * 0.035f, 0xFFF3D6, 0.8f);
             p.circulo(cx + w * 0.12f, cy - h * 0.06f, w * 0.03f, 0xFFF3D6, 0.7f);
         } else if (ing == Catalogo.SALSA) {
-            p.circulo(cx, cy - h * 0.02f, w * 0.35f, 0xC0392B);
-            p.elipse(cx, cy - h * 0.30f, w * 0.25f, h * 0.08f, 0x8E2A20, 0.85f);
-            p.circulo(cx - w * 0.10f, cy + h * 0.08f, w * 0.09f, 0xE35D4F, 0.72f);
-            p.circulo(cx + w * 0.13f, cy - h * 0.04f, w * 0.05f, 0xF07A68, 0.65f);
+
+            // CUERPO DE LA BOTELLA
+            p.redondeado(
+                    cx - w * 0.34f,
+                    y + h * 0.08f,
+                    w * 0.68f,
+                    h * 0.62f,
+                    w * 0.16f,
+                    0xC0392B
+            );
+    
+            // CUELLO
+            p.redondeado(
+                    cx - w * 0.17f,
+                    y + h * 0.64f,
+                    w * 0.34f,
+                    h * 0.20f,
+                    w * 0.07f,
+                    0xC0392B
+            );
+    
+            // TAPA
+            p.redondeado(
+                    cx - w * 0.19f,
+                    y + h * 0.82f,
+                    w * 0.38f,
+                    h * 0.12f,
+                    w * 0.04f,
+                    0x8E2A2A
+            );
+    
+            // ETIQUETA
+            p.redondeado(
+                    cx - w * 0.25f,
+                    y + h * 0.27f,
+                    w * 0.50f,
+                    h * 0.28f,
+                    w * 0.05f,
+                    0xFFF3D6
+            );
+    
+            // PEQUEÑO TOMATE EN LA ETIQUETA
+            p.circulo(
+                    cx,
+                    y + h * 0.41f,
+                    w * 0.09f,
+                    0xE5484D
+            );
+    
+            // BRILLO DE LA BOTELLA
+            p.rect(
+                    cx - w * 0.23f,
+                    y + h * 0.36f,
+                    w * 0.045f,
+                    h * 0.38f,
+                    0xFFFFFF,
+                    0.30f
+            );
         } else if (ing == Catalogo.SALCHICHA) {
             p.redondeado(cx - w * 0.45f, cy - h * 0.16f, w * 0.90f, h * 0.32f,
                     h * 0.16f, 0xA8432F);
