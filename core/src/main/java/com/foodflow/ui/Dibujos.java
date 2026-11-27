@@ -956,4 +956,78 @@ public final class Dibujos {
             );
         }
     }
+
+    /**
+     * Cliente de cuerpo completo apoyado en yPies. Reutiliza cliente() para el busto
+     * y agrega piernas, brazos, zapatos y sombra para la escena del restaurante.
+     */
+    public static void clienteCompleto(Pincel p, float cx, float yPies, float s, Aspecto a, float animo) {
+        clienteCompleto(p, cx, yPies, s, a, animo, true, true);
+    }
+
+    private static void clienteCompleto(Pincel p, float cx, float yPies, float s, Aspecto a, float animo,
+                                        boolean brazoIzquierdo, boolean brazoDerecho) {
+        int pantalon = Pincel.mezclarRgb(a.getCamisa(), 0x1B1D26, 0.62f);
+        int zapato = 0x2A2320;
+
+        p.elipse(cx, yPies + s * 0.06f, s * 1.18f, s * 0.28f, 0x090502, 0.28f);
+
+        // Piernas y zapatos
+        p.redondeado(cx - s * 0.62f, yPies + s * 0.12f, s * 0.44f, s * 1.05f, s * 0.18f, pantalon);
+        p.redondeado(cx + s * 0.18f, yPies + s * 0.12f, s * 0.44f, s * 1.05f, s * 0.18f, pantalon);
+        p.redondeado(cx - s * 0.70f, yPies, s * 0.58f, s * 0.30f, s * 0.13f, zapato);
+        p.redondeado(cx + s * 0.12f, yPies, s * 0.58f, s * 0.30f, s * 0.13f, zapato);
+
+        cliente(p, cx, yPies + s * 4.10f, s, a, animo);
+
+        // Brazos a los costados, por fuera del torso para que se vean completos.
+        if (brazoIzquierdo) {
+            p.redondeado(cx - s * 1.78f, yPies + s * 1.30f, s * 0.36f, s * 1.18f, s * 0.17f, a.getCamisa());
+            p.circulo(cx - s * 1.60f, yPies + s * 1.24f, s * 0.18f, a.getPiel());
+        }
+        if (brazoDerecho) {
+            p.redondeado(cx + s * 1.42f, yPies + s * 1.30f, s * 0.36f, s * 1.18f, s * 0.17f, a.getCamisa());
+            p.circulo(cx + s * 1.60f, yPies + s * 1.24f, s * 0.18f, a.getPiel());
+        }
+    }
+
+    private static final Aspecto CHEF = new Aspecto(0xF1C27D, 0x3B2416, 0xFFF7E8, 0, 3, 0xFFFFFF);
+
+    /**
+     * Personaje fijo del jugador: chef con gorro, delantal y pañuelo.
+     * 'atendiendo' extiende el brazo hacia el cliente; 'servir' distinto de 0 muestra la bandeja
+     * (positivo con visto bueno, negativo con cruz).
+     */
+    public static void cocinero(Pincel p, float cx, float yPies, float s, boolean atendiendo, float servir) {
+        // Al atender, el brazo derecho se reemplaza por el brazo extendido de abajo.
+        clienteCompleto(p, cx, yPies, s, CHEF, 1f, true, !(atendiendo || servir != 0f));
+        float cy = yPies + s * 4.10f;
+
+        int delantal = 0x2A9D8F;
+        p.redondeado(cx - s * 0.88f, yPies + s * 1.05f, s * 1.76f, s * 1.75f, s * 0.18f, delantal, 1f);
+        p.redondeado(cx - s * 0.42f, yPies + s * 1.45f, s * 0.84f, s * 0.36f, s * 0.08f, 0x247F76, 1f);
+        p.rectRotado(cx - s * 0.34f, cy - s * 1.05f, s * 0.68f, s * 0.10f, 12f, delantal, 1f);
+        p.rectRotado(cx + s * 0.34f, cy - s * 1.05f, s * 0.68f, s * 0.10f, -12f, delantal, 1f);
+        p.circulo(cx, cy - s * 1.48f, s * 0.22f, 0xE5484D, 1f);
+
+        // Gorro de chef (toca el techo: silueta mas alta, estilo logo)
+        p.redondeado(cx - s * 0.92f, cy + s * 0.72f, s * 1.84f, s * 0.34f, s * 0.12f, 0xFFFFFF, 1f);
+        p.circulo(cx - s * 0.52f, cy + s * 1.16f, s * 0.42f, 0xFFFFFF, 1f);
+        p.circulo(cx, cy + s * 1.32f, s * 0.52f, 0xFFFFFF, 1f);
+        p.circulo(cx + s * 0.52f, cy + s * 1.16f, s * 0.42f, 0xFFFFFF, 1f);
+        p.redondeado(cx - s * 0.20f, cy + s * 0.84f, s * 0.40f, s * 0.12f, s * 0.05f,
+                0xE8E2D2, 0.90f);
+
+        if (atendiendo || servir != 0f) {
+            p.redondeado(cx + s * 1.00f, yPies + s * 2.35f, s * 1.15f, s * 0.34f, s * 0.17f,
+                    0xFFF7E8, 1f);
+            p.circulo(cx + s * 2.18f, yPies + s * 2.52f, s * 0.20f, CHEF.getPiel(), 1f);
+            p.elipse(cx + s * 2.18f, yPies + s * 2.76f, s * 0.34f, s * 0.08f, 0xE8E4D8, 1f);
+            if (servir != 0f) {
+                p.circulo(cx + s * 2.18f, yPies + s * 2.88f, s * 0.17f, 0xF2B33D, 0.95f);
+                if (servir > 0f) check(p, cx + s * 2.18f, yPies + s * 2.88f, s * 0.24f, 0x3A2708, 1f);
+                else cruz(p, cx + s * 2.18f, yPies + s * 2.88f, s * 0.20f, 0x7A1D1D, 1f);
+            }
+        }
+    }
 }

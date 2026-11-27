@@ -8,9 +8,9 @@ import com.foodflow.FoodFlowGame;
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-        config.setTitle("FoodFlow");
-        config.setWindowedMode(960, 600);
-        // ventana de 960x600 pixeles reales: evita que Windows la agrande y meta barras negras
+        config.setTitle("The Hunger Games");
+        config.setWindowedMode(960, 540);
+        // ventana de 960x540 pixeles reales: evita que Windows la agrande y meta barras negras
         config.setHdpiMode(com.badlogic.gdx.graphics.glutils.HdpiMode.Pixels);
         config.setResizable(true);
         config.useVsync(true);

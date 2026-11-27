@@ -70,10 +70,10 @@ public class TiendaScreen extends PantallaBase {
         float t = p.getTiempo();
 
         // ---------------------------------------------------------- fondo
-        p.imagenCubriendo(juego.fondoTienda, 0, 0, 960, 600, 0.5f, 0.35f, 0x2C2233);
-        p.rect(0, 0, 960, 600, 0x1A1020, 0.12f);
-        p.degradadoAlpha(0, 330, 960, 270, 0x120E18, 0f, 0.80f);
-        p.degradadoAlpha(0, 0, 960, 110, 0x120E18, 0.68f, 0f);
+        p.imagenCubriendo(juego.fondoTienda, 0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0.5f, 0.35f, 0x2C2233);
+        p.rect(0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0x1A1020, 0.12f);
+        p.degradadoAlpha(0, 330, FoodFlowGame.ANCHO, 270, 0x120E18, 0f, 0.80f);
+        p.degradadoAlpha(0, 0, FoodFlowGame.ANCHO, 110, 0x120E18, 0.68f, 0f);
         p.halo(480, 540, 210, 0xFFB347, 0.24f + 0.04f * (float) Math.sin(t * 1.6f));
 
         // ---------------------------------------------------------- cabecera

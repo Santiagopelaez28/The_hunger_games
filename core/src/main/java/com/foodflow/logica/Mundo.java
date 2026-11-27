@@ -26,7 +26,7 @@ public class Mundo {
     public enum Estado { JUGANDO, DIA_TERMINADO, FIN_JUEGO }
     public enum Entrega { SIN_CLIENTE, CORRECTA, INCORRECTA }
 
-    public static final int CAPACIDAD_COLA = 5;
+    public static final int CAPACIDAD_COLA = 10;
     public static final int MAX_PLATO = 8;
     public static final int VIDAS_INICIALES = 5;
     public static final float DURACION_DIA = 110f;
@@ -51,7 +51,13 @@ public class Mundo {
     private float tiempoMensaje = 0f;
 
     public Mundo() { this(System.nanoTime()); }
-    public Mundo(long semilla) { this.rnd = new Random(semilla); }
+    public Mundo(long semilla) {
+        this.rnd = new Random(semilla);
+        // El restaurante abre con tres clientes esperando: la cola puede pasar de cinco puestos.
+        recibirCliente();
+        recibirCliente();
+        recibirCliente();
+    }
 
     // ---------------------------------------------------------------- avance del tiempo
 
