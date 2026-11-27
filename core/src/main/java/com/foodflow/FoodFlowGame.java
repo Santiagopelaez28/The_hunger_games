@@ -5,7 +5,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.foodflow.logica.ArbolAVL;
 import com.foodflow.logica.Mundo;
+import com.foodflow.logica.RegistroPartida;
 import com.foodflow.pantallas.MenuScreen;
 import com.foodflow.ui.Pincel;
 
@@ -26,6 +28,8 @@ public class FoodFlowGame extends Game {
 
     public Sound campana;        // sonido al atender (assets/campana.wav; opcional)
 
+    public ArbolAVL arbolPartidas; // árbol AVL con el historial de partidas finalizadas
+
     public Texture logoRestaurante; // logo del restaurante para el letrero (assets/restaurante_logo.*; opcional)
 
     @Override
@@ -43,10 +47,22 @@ public class FoodFlowGame extends Game {
         }
         vista = new FitViewport(ANCHO, ALTO);   // el juego se dibuja en 960x600 y se escala a la ventana
         mundo = new Mundo();
+        arbolPartidas = new ArbolAVL();
         setScreen(new MenuScreen(this));
     }
 
     public void nuevaPartida() { mundo = new Mundo(); }
+
+    /** Registra la partida que acaba de terminar en el árbol AVL de mejores juegos. */
+    public void registrarPartidaFinalizada() {
+        RegistroPartida r = new RegistroPartida(
+                mundo.getDia(),
+                mundo.getEntregados(),
+                mundo.getPerdidos(),
+                mundo.getMonedas()
+        );
+        arbolPartidas.insertar(r);
+    }
 
     /** Carga assets/nombre.jpg, .png o .webp. Si falta, el juego sigue con un color liso en su lugar. */
     private Texture cargarFondo(String nombre) {

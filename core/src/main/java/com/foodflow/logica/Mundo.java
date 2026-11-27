@@ -3,14 +3,17 @@ package com.foodflow.logica;
 import com.foodflow.modelo.Aspecto;
 import com.foodflow.modelo.Cliente;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.Mejora;
 import com.foodflow.modelo.NivelCliente;
 import com.foodflow.modelo.Receta;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.Stack;
 
 /**
@@ -21,9 +24,10 @@ import java.util.Stack;
  *  - Stack<Ingrediente>    plato en construcción (LIFO). deshacer() quita el último ingrediente.
  *  - ListaDoble<Ingrediente> despensa; sus nodos permiten recorrerla hacia adelante y hacia atrás.
  *  - Recetario             diccionario de recetas; los clientes piden una receta completa.
+ *  - ArbolMejoras          catalogo de mejoras ordenado por costo.
  */
 public class Mundo {
-    public enum Estado { JUGANDO, DIA_TERMINADO, FIN_JUEGO }
+    public enum Estado { JUGANDO, MEJORAS, DIA_TERMINADO, FIN_JUEGO }
     public enum Entrega { SIN_CLIENTE, CORRECTA, INCORRECTA }
 
     public static final int CAPACIDAD_COLA = 10;
@@ -57,6 +61,12 @@ public class Mundo {
     private int vipsEsteDia = 0;                        // cuantos VIPs se han generado hoy
     private boolean ultimoFueVIP = false;               // evita que dos VIPs lleguen uno tras otro
 
+    // ---------------------------------------------------------------- sistema de mejoras
+    private final ArbolMejoras arbolMejoras = new ArbolMejoras();
+    private final List<Mejora> ofertasMejoras = new ArrayList<>();
+    private final Set<String> mejorasCompradas = new HashSet<>();
+    private final Set<String> mejorasActivas = new HashSet<>();
+
     public Mundo() { this(System.nanoTime()); }
     public Mundo(long semilla) {
         this.rnd = new Random(semilla);
@@ -68,29 +78,30 @@ public class Mundo {
 
     // ---------------------------------------------------------------- avance del tiempo
 
+    private float tiempoTranscurridoDia = 0f;
+
     /** Avanza el juego dt segundos. Llamar una vez por frame. */
     public void actualizar(float dt) {
-        if (estado != Estado.JUGANDO) return;
-        if (tiempoMensaje > 0) tiempoMensaje -= dt;
+        if (estado != Estado.JUGANDO || dt <= 0f) return;
+        if (tiempoMensaje > 0f) tiempoMensaje = Math.max(0f, tiempoMensaje - dt);
 
         // Llegadas (solo mientras dure el día)
         if (tiempoDia > 0) {
             tiempoDia = Math.max(0f, tiempoDia - dt);
+            tiempoTranscurridoDia += dt;
             relojLlegada -= dt;
-            while (relojLlegada <= 0 && estado == Estado.JUGANDO) {
+            while (relojLlegada <= 0f && estado == Estado.JUGANDO && tiempoDia > 0f) {
                 relojLlegada += intervaloLlegada();
                 recibirCliente();
             }
         }
 
         // Paciencia de quienes esperan en la cola (se recorre toda, por si las pacientes difieren)
-        Iterator<Cliente> it = cola.iterator();
-        while (it.hasNext()) {
-            Cliente c = it.next();
+        for (Cliente c : cola.aLista()) {
             c.esperar(dt);
-            if (c.agotado()) {
-                it.remove();
+            if (c.agotado() && cola.remover(c)) {
                 perderCliente("Un cliente se canso de esperar");
+                if (estado == Estado.FIN_JUEGO) return;
             }
         }
 
@@ -101,33 +112,42 @@ public class Mundo {
                 enAtencion = null;
                 plato.clear();
                 perderCliente("Se agoto la paciencia del cliente en atencion");
+                if (estado == Estado.FIN_JUEGO) return;
             }
         }
 
-        if (estado == Estado.JUGANDO && tiempoDia <= 0 && cola.isEmpty() && enAtencion == null) {
-            estado = Estado.DIA_TERMINADO;
+        // Al terminar el tiempo, se espera a que no queden clientes y se pasa a mejoras.
+        if (estado == Estado.JUGANDO && tiempoDia <= 0f
+                && cola.isEmpty() && enAtencion == null) {
+            estado = Estado.MEJORAS;
+            generarOfertasMejoras();
         }
     }
 
     private void recibirCliente() {
-        if (cola.size() >= CAPACIDAD_COLA) {
+        if (cola.size() >= getCapacidadCola()) {
             perderCliente("Local lleno: un cliente se fue");
-        } else {
-            // Los VIPs no aparecen hasta que pasen TIEMPO_MINIMO_VIP segundos del inicio del dia,
-            // y nunca dos seguidos (uno detras del otro).
-            float tiempoTranscurrido = DURACION_DIA - tiempoDia;
-            boolean disponibleVIP = tiempoTranscurrido >= TIEMPO_MINIMO_VIP && !ultimoFueVIP;
-            Receta receta = elegirReceta();
-            NivelCliente nivel = disponibleVIP ? decidirNivelVIP() : NivelCliente.COMUN;
-            Aspecto aspecto = (nivel != NivelCliente.COMUN)
-                    ? Aspecto.vip(rnd, nivel)
-                    : Aspecto.aleatorio(rnd);
-            float pacienciaCliente = (nivel != NivelCliente.COMUN) ? paciencia() * 1.25f : paciencia();
-            Cliente c = new Cliente(siguienteNumero++, receta, pacienciaCliente, aspecto, nivel);
-            cola.offer(c);
-            ultimoFueVIP = (nivel != NivelCliente.COMUN);
-            if (nivel != NivelCliente.COMUN) vipsEsteDia++;
+            return;
         }
+
+        Receta receta = elegirReceta();
+
+        // Los VIPs no aparecen hasta que pasen TIEMPO_MINIMO_VIP segundos del inicio del dia,
+        // y nunca dos seguidos (uno detras del otro).
+        boolean disponibleVIP = tiempoTranscurridoDia >= TIEMPO_MINIMO_VIP && !ultimoFueVIP;
+        NivelCliente nivel = disponibleVIP ? decidirNivelVIP() : NivelCliente.COMUN;
+        Aspecto aspecto = (nivel != NivelCliente.COMUN)
+                ? Aspecto.vip(rnd, nivel)
+                : Aspecto.aleatorio(rnd);
+
+        float pacienciaBase = paciencia();
+        float pacienciaCliente = pacienciaBase * multiplicadorPaciencia();
+        if (nivel.esVIP()) pacienciaCliente *= 1.25f;
+
+        Cliente c = new Cliente(siguienteNumero++, receta, pacienciaCliente, aspecto, nivel);
+        cola.offer(c);
+        ultimoFueVIP = (nivel != NivelCliente.COMUN);
+        if (nivel != NivelCliente.COMUN) vipsEsteDia++;
     }
 
     /** Decide si el próximo cliente es VIP y de qué nivel.
@@ -181,11 +201,12 @@ public class Mundo {
         boolean correcto = plato.size() == c.getReceta().size() && platoCoincide();
         enAtencion = null;
         if (correcto) {
-            int propina = Math.round(c.fraccionPaciencia() * 4);
-            int pago = c.pagoBase() + propina;
+            int propina = Math.round(c.fraccionPaciencia() * 4f);
+            int pagoBase = c.pagoBase() + propina;
+            int pago = Math.round(pagoBase * multiplicadorPago());
             monedas += pago;
             entregados++;
-            avisar("Pedido correcto: +$" + pago + " (propina $" + propina + ")");
+            avisar("Pedido correcto: +$" + pago + " (propina incluida)");
             plato.clear();
             return Entrega.CORRECTA;
         }
@@ -207,9 +228,10 @@ public class Mundo {
 
     /** Compra un ingrediente nuevo (solo entre días). Se agrega al final de la lista doble. */
     public boolean comprar(Ingrediente ingrediente) {
-        if (estado != Estado.DIA_TERMINADO) return false;
-        if (disponibles.contiene(ingrediente) || monedas < ingrediente.getCosto()) return false;
-        monedas -= ingrediente.getCosto();
+        if (estado != Estado.DIA_TERMINADO || ingrediente == null) return false;
+        int costo = getCostoIngrediente(ingrediente);
+        if (disponibles.contiene(ingrediente) || monedas < costo) return false;
+        monedas -= costo;
         disponibles.agregar(ingrediente);
         return true;
     }
@@ -217,7 +239,8 @@ public class Mundo {
     public boolean siguienteDia() {
         if (estado != Estado.DIA_TERMINADO) return false;
         dia++;
-        tiempoDia = DURACION_DIA;
+        tiempoDia = getDuracionDiaTotal();
+        tiempoTranscurridoDia = 0f;
         relojLlegada = 1f;
         vipsEsteDia = 0;   // nuevo día: se reinicia el mínimo de VIPs
         ultimoFueVIP = false; // nuevo día: se puede volver a generar VIPs
@@ -276,6 +299,154 @@ public class Mundo {
     public float getTiempoDia() { return tiempoDia; }
     public String getMensaje() { return tiempoMensaje > 0 ? mensaje : ""; }
 
+    // ---------------------------------------------------------------- sistema de mejoras y arbol binario
+
+    /** Compra una de las mejoras ofrecidas. Solo se permite una por dia. */
+    public boolean comprarMejora(String id) {
+        if (estado != Estado.MEJORAS || id == null) return false;
+
+        for (Mejora mejora : ofertasMejoras) {
+            if (!mejora.getId().equals(id)) continue;
+            if (mejorasCompradas.contains(id) || monedas < mejora.getCosto()) return false;
+
+            // El seguro recupera una vida inmediatamente; las otras mejoras son permanentes.
+            if ("seguro_comercial".equals(id)) {
+                if (vidas >= VIDAS_INICIALES) return false;
+                vidas++;
+            } else {
+                mejorasActivas.add(id);
+            }
+
+            monedas -= mejora.getCosto();
+            mejorasCompradas.add(id);
+            ofertasMejoras.clear();
+            estado = Estado.DIA_TERMINADO;
+            avisar("Mejora adquirida: " + mejora.getNombre());
+            return true;
+        }
+
+        return false;
+    }
+
+    /** Omite las mejoras y habilita la tienda. */
+    public void omitirMejoras() {
+        if (estado != Estado.MEJORAS) return;
+
+        ofertasMejoras.clear();
+        estado = Estado.DIA_TERMINADO;
+        avisar("Mejoras omitidas. Puedes visitar la tienda.");
+    }
+
+    private void generarOfertasMejoras() {
+        ofertasMejoras.clear();
+
+        List<Mejora> costosas = arbolMejoras.obtenerEnRango(300, Integer.MAX_VALUE);
+        List<Mejora> equilibradas = arbolMejoras.obtenerEnRango(1, 299);
+
+        filtrarCompradas(costosas);
+        filtrarCompradas(equilibradas);
+
+        agregarOfertaAleatoria(costosas);
+        agregarOfertaAleatoria(equilibradas);
+        agregarOfertaAleatoria(equilibradas);
+
+        // Si se agota una categoria, se completan las ofertas con las restantes.
+        List<Mejora> restantes = arbolMejoras.obtenerEnOrden();
+        filtrarCompradas(restantes);
+
+        while (ofertasMejoras.size() < 3 && !restantes.isEmpty()) {
+            agregarOfertaAleatoria(restantes);
+        }
+
+        Collections.shuffle(ofertasMejoras, rnd);
+    }
+
+    private void filtrarCompradas(List<Mejora> lista) {
+        java.util.Iterator<Mejora> it = lista.iterator();
+        while (it.hasNext()) {
+            Mejora mejora = it.next();
+            if (mejorasCompradas.contains(mejora.getId())
+                    || contieneOferta(mejora.getId())) {
+                it.remove();
+            } else if ("seguro_comercial".equals(mejora.getId())
+                    && vidas >= VIDAS_INICIALES) {
+                it.remove();
+            }
+        }
+    }
+
+    private boolean contieneOferta(String id) {
+        for (Mejora oferta : ofertasMejoras) {
+            if (oferta.getId().equals(id)) return true;
+        }
+        return false;
+    }
+
+    private void agregarOfertaAleatoria(List<Mejora> candidatas) {
+        if (candidatas.isEmpty()) return;
+        int indice = rnd.nextInt(candidatas.size());
+        Mejora elegida = candidatas.remove(indice);
+        ofertasMejoras.add(elegida);
+    }
+
+    public List<Mejora> getOfertasMejoras() {
+        return Collections.unmodifiableList(ofertasMejoras);
+    }
+
+    public boolean tieneMejora(String id) {
+        return mejorasActivas.contains(id) || mejorasCompradas.contains(id);
+    }
+
+    public int getCantidadMejorasCompradas() {
+        return mejorasCompradas.size();
+    }
+
+    private float multiplicadorPago() {
+        float multiplicador = 1f;
+        if (mejorasActivas.contains("caja_registradora")) multiplicador *= 1.20f;
+        if (mejorasActivas.contains("publicidad_agresiva")) multiplicador *= 1.25f;
+        if (mejorasActivas.contains("proveedor_economico")) multiplicador *= 0.90f;
+        if (mejorasActivas.contains("menu_gourmet")) multiplicador *= 1.35f;
+        return multiplicador;
+    }
+
+    private float multiplicadorPaciencia() {
+        float multiplicador = 1f;
+        if (mejorasActivas.contains("atencion_vip")) multiplicador *= 1.25f;
+        if (mejorasActivas.contains("cafe_clientes")) multiplicador *= 1.30f;
+        if (mejorasActivas.contains("horario_nocturno")) multiplicador *= 0.85f;
+        if (mejorasActivas.contains("menu_gourmet")) multiplicador *= 0.80f;
+        return multiplicador;
+    }
+
+    private float multiplicadorLlegadas() {
+        float multiplicador = 1f;
+        if (mejorasActivas.contains("publicidad_agresiva")) multiplicador *= 0.80f;
+        if (mejorasActivas.contains("cafe_clientes")) multiplicador *= 0.85f;
+        return multiplicador;
+    }
+
+    public int getCapacidadCola() {
+        return CAPACIDAD_COLA
+                + (mejorasActivas.contains("sala_ampliada") ? 2 : 0);
+    }
+
+    public float getDuracionDiaTotal() {
+        float duracion = DURACION_DIA;
+        if (mejorasActivas.contains("cocina_renovada")) duracion *= 1.20f;
+        if (mejorasActivas.contains("horario_nocturno")) duracion *= 1.25f;
+        return duracion;
+    }
+
+    /** Costo del ingrediente aplicando el descuento de Proveedor economico. */
+    public int getCostoIngrediente(Ingrediente ingrediente) {
+        if (ingrediente == null) return 0;
+        if (mejorasActivas.contains("proveedor_economico")) {
+            return Math.max(1, Math.round(ingrediente.getCosto() * 0.70f));
+        }
+        return ingrediente.getCosto();
+    }
+
     // ---------------------------------------------------------------- internos
 
     private void perderCliente(String motivo) {
@@ -291,8 +462,14 @@ public class Mundo {
     }
 
     /** Dificultad: cada día llegan más rápido y con menos paciencia. */
-    private float intervaloLlegada() { return Math.max(4f, 10f - 0.8f * (dia - 1)); }
-    private float paciencia() { return Math.max(20f, 45f - 4f * (dia - 1)); }
+    private float intervaloLlegada() {
+        float base = Math.max(4f, 10f - 0.8f * (dia - 1));
+        return Math.max(2.5f, base * multiplicadorLlegadas());
+    }
+    private float paciencia() {
+        float base = Math.max(20f, 45f - 4f * (dia - 1));
+        return Math.max(10f, base * multiplicadorPaciencia());
+    }
 
     /** Elige una receta del diccionario que se pueda preparar con la despensa actual. */
     private Receta elegirReceta() {
