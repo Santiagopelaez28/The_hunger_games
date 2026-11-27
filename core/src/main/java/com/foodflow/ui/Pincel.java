@@ -61,8 +61,8 @@ public class Pincel implements Disposable {
         disco.dispose();
         circulo.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
-        // la fuente incluida se ve mas nítida (sin alisado borroso) con filtrado cercano
-        fuente.getRegion().getTexture().setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        // la fuente incluida se ve mas suave con filtrado lineal al escalarla
+        fuente.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
 
     public void iniciar(Matrix4 proyeccion) {
@@ -243,22 +243,6 @@ public class Pincel implements Disposable {
         int sy = Math.round(fy * (th - sh));
         batch.setColor(1f, 1f, 1f, alfaGlobal);
         batch.draw(t, x, y, w, h, sx, sy, sw, sh, false, false);
-    }
-
-    /** Dibuja la imagen completa dentro del rectangulo (x,y,w,h), centrada, sin recortar ni deformar. */
-    public void imagenAjustando(Texture t, float x, float y, float w, float h, int rgbRespaldo) {
-        if (t == null) {
-            rect(x, y, w, h, rgbRespaldo);
-            return;
-        }
-        int tw = t.getWidth(), th = t.getHeight();
-        float escala = Math.min(w / tw, h / th);
-        int sw = Math.round(tw * escala);
-        int sh = Math.round(th * escala);
-        float sx = x + (w - sw) / 2f;
-        float sy = y + (h - sh) / 2f;
-        batch.setColor(1f, 1f, 1f, alfaGlobal);
-        batch.draw(t, sx, sy, sw, sh);
     }
 
     // ------------------------------------------------------------------ texto
