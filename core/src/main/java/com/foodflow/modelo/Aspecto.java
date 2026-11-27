@@ -38,6 +38,21 @@ public final class Aspecto {
                 COLOR_ACCESORIO[rnd.nextInt(COLOR_ACCESORIO.length)]);
     }
 
+    /**
+     * Crea un aspecto de cliente VIP mas llamativo: colores vivos y brillantes
+     * segun el nivel (dorado para Gold, plata para Silver).
+     */
+    public static Aspecto vip(Random rnd, NivelCliente nivel) {
+        int piel = PIEL[rnd.nextInt(PIEL.length)];
+        int pelo = PELO[rnd.nextInt(PELO.length)];
+        int camisa = (nivel == NivelCliente.GOLD) ? 0xF2B33D : 0xBFC9D1;   // dorado o plata
+        int peinado = rnd.nextInt(PEINADOS);
+        int accesorio = rnd.nextInt(ACCESORIOS);
+        if (accesorio == 1 && (peinado == 2 || peinado == 4)) accesorio = 0;
+        int colorAccesorio = (nivel == NivelCliente.GOLD) ? 0xF2B33D : 0xBFC9D1;
+        return new Aspecto(piel, pelo, camisa, peinado, accesorio, colorAccesorio);
+    }
+
     public int getPiel() { return piel; }
     public int getPelo() { return pelo; }
     public int getCamisa() { return camisa; }

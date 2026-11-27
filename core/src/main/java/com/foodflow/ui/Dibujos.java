@@ -3,6 +3,7 @@ package com.foodflow.ui;
 import com.foodflow.logica.Catalogo;
 import com.foodflow.modelo.Aspecto;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.NivelCliente;
 import com.foodflow.modelo.TipoPlato;
 
 import java.util.List;
@@ -265,64 +266,29 @@ public final class Dibujos {
             p.circulo(cx - w * 0.18f, cy + h * 0.05f, w * 0.035f, 0xFFF3D6, 0.8f);
             p.circulo(cx + w * 0.12f, cy - h * 0.06f, w * 0.03f, 0xFFF3D6, 0.7f);
         } else if (ing == Catalogo.SALSA) {
+            // Bote de salsa: tapa, cuello, cuerpo y salsa rebosando por arriba
+            float cuelloW = w * 0.45f;
+            float cuelloH = h * 0.22f;
+            float cuerpoW = w * 0.78f;
+            float cuerpoH = h * 0.62f;
 
-            // CUERPO DE LA BOTELLA
-            p.redondeado(
-                    cx - w * 0.34f,
-                    y + h * 0.08f,
-                    w * 0.68f,
-                    h * 0.62f,
-                    w * 0.16f,
-                    0xC0392B
-            );
-    
-            // CUELLO
-            p.redondeado(
-                    cx - w * 0.17f,
-                    y + h * 0.64f,
-                    w * 0.34f,
-                    h * 0.20f,
-                    w * 0.07f,
-                    0xC0392B
-            );
-    
-            // TAPA
-            p.redondeado(
-                    cx - w * 0.19f,
-                    y + h * 0.82f,
-                    w * 0.38f,
-                    h * 0.12f,
-                    w * 0.04f,
-                    0x8E2A2A
-            );
-    
-            // ETIQUETA
-            p.redondeado(
-                    cx - w * 0.25f,
-                    y + h * 0.27f,
-                    w * 0.50f,
-                    h * 0.28f,
-                    w * 0.05f,
-                    0xFFF3D6
-            );
-    
-            // PEQUEÑO TOMATE EN LA ETIQUETA
-            p.circulo(
-                    cx,
-                    y + h * 0.41f,
-                    w * 0.09f,
-                    0xE5484D
-            );
-    
-            // BRILLO DE LA BOTELLA
-            p.rect(
-                    cx - w * 0.23f,
-                    y + h * 0.36f,
-                    w * 0.045f,
-                    h * 0.38f,
-                    0xFFFFFF,
-                    0.30f
-            );
+            // Tapa del bote
+            p.redondeado(cx - cuelloW / 2f, cy - h * 0.42f, cuelloW, cuelloH * 0.5f, cuelloH * 0.10f, 0x7A5200);
+            p.redondeado(cx - cuelloW / 2f + cuelloW * 0.06f, cy - h * 0.38f, cuelloW * 0.88f, cuelloH * 0.45f, cuelloH * 0.08f, 0x5A3A1E);
+            // Cuello
+            p.rect(cx - cuelloW / 2f, cy - h * 0.20f, cuelloW, cuelloH * 0.55f, 0xA98A5A);
+            // Cuerpo del bote (cristal traslúcido)
+            p.redondeado(cx - cuerpoW / 2f, cy - h * 0.20f - cuerpoH, cuerpoW, cuerpoH, cuerpoH * 0.10f, 0xFDF6E3, 0.95f);
+            p.redondeado(cx - cuerpoW / 2f + 2f, cy - h * 0.20f - cuerpoH + 2f, cuerpoW - 4f, cuerpoH - 4f, cuerpoH * 0.08f, 0xF5E7C8, 0.7f);
+            // Salsa dentro del bote (relleno rojo)
+            float salsaY = cy - h * 0.20f - cuerpoH + cuerpoH * 0.78f;
+            p.redondeado(cx - cuerpoW / 2f + 4f, salsaY, cuerpoW - 8f, cuerpoH * 0.62f, 3f, 0xC0392B);
+            // Burbujas de la salsa
+            p.circulo(cx - cuerpoW * 0.18f, salsaY + cuerpoH * 0.20f, w * 0.05f, 0xF5A9A9, 0.8f);
+            p.circulo(cx + cuerpoW * 0.12f, salsaY + cuerpoH * 0.35f, w * 0.04f, 0xF5A9A9, 0.75f);
+            // Salpicadura de salsa saliendo por la tapa
+            p.circulo(cx, cy - h * 0.45f, w * 0.08f, 0xC0392B);
+            p.circulo(cx - w * 0.05f, cy - h * 0.40f, w * 0.06f, 0xE5484D, 0.8f);
         } else if (ing == Catalogo.SALCHICHA) {
             p.redondeado(cx - w * 0.45f, cy - h * 0.16f, w * 0.90f, h * 0.32f,
                     h * 0.16f, 0xA8432F);
@@ -1043,6 +1009,30 @@ public final class Dibujos {
             p.redondeado(cx + s * 1.42f, yPies + s * 1.30f, s * 0.36f, s * 1.18f, s * 0.17f, a.getCamisa());
             p.circulo(cx + s * 1.60f, yPies + s * 1.24f, s * 0.18f, a.getPiel());
         }
+    }
+
+    /**
+     * Corona VIP sobre la cabeza del cliente. Mas grande y brillante para Gold,
+     * un poco mas sobria para Silver. Se dibuja encima del busto del cliente.
+     */
+    public static void coronaVIP(Pincel p, float cx, float cy, float s, NivelCliente nivel) {
+        int color = (nivel == NivelCliente.GOLD) ? DORADO : 0xBFC9D1;
+        float w = 1.7f * s;
+        float h = 0.75f * s;
+        float y = cy - 1.05f * s - h;   // sobre la cabeza
+
+        // Base de la corona
+        p.redondeado(cx - w / 2f, y, w, h * 0.45f, h * 0.10f, color);
+        // Tres picos
+        p.redondeado(cx - w * 0.42f, y - h * 0.45f, w * 0.34f, h * 0.75f, h * 0.08f, color);
+        p.redondeado(cx - w * 0.08f, y - h * 0.70f, w * 0.26f, h * 0.95f, h * 0.08f, color);
+        p.redondeado(cx + w * 0.26f, y - h * 0.45f, w * 0.34f, h * 0.75f, h * 0.08f, color);
+        // Joyas en los picos
+        p.circulo(cx, y - h * 0.55f + h * 0.95f, h * 0.10f, 0xFFFFFF, 0.95f);
+        p.circulo(cx - w * 0.33f, y - h * 0.20f, h * 0.08f, 0xFFFFFF, 0.85f);
+        p.circulo(cx + w * 0.33f, y - h * 0.20f, h * 0.08f, 0xFFFFFF, 0.85f);
+        // Destello para que sea mas llamativo
+        Dibujos.destello(p, cx, y - h * 0.30f, h * 0.50f, color, 0.9f);
     }
 
     private static final Aspecto CHEF = new Aspecto(0xF1C27D, 0x3B2416, 0xFFF7E8, 0, 3, 0xFFFFFF);

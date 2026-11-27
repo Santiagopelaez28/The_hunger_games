@@ -3,24 +3,24 @@ package com.foodflow.logica;
 import com.foodflow.modelo.Aspecto;
 import com.foodflow.modelo.Cliente;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.NivelCliente;
 import com.foodflow.modelo.Receta;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 
 /**
- - Reglas del juego, sin nada de LibGDX (se puede probar sin abrir ventana).
+ * Reglas del juego, sin nada de LibGDX (se puede probar sin abrir ventana).
  *
- -  - PriorityQueue<Cliente> cola de llegada con prioridad VIP. Si se llena o la paciencia se agota, el cliente se va.
- -  - Stack<Ingrediente>     plato en construcción (LIFO). deshacer() quita el último ingrediente.
- -  - ListaDoble<Ingrediente>  despensa; sus nodos permiten recorrerla hacia adelante y hacia atrás.
- -  - Recetario              diccionario de recetas; los clientes piden una receta completa.
+ *  - ColaPrioridad<Cliente> cola de llegada (min-heap por prioridad: VIP Gold=1, VIP Silver=2, Comun=3).
+ *    Si se llena o la paciencia se agota, el cliente se va.
+ *  - Stack<Ingrediente>    plato en construcción (LIFO). deshacer() quita el último ingrediente.
+ *  - ListaDoble<Ingrediente> despensa; sus nodos permiten recorrerla hacia adelante y hacia atrás.
+ *  - Recetario             diccionario de recetas; los clientes piden una receta completa.
  */
 public class Mundo {
     public enum Estado { JUGANDO, DIA_TERMINADO, FIN_JUEGO }
@@ -29,11 +29,11 @@ public class Mundo {
     public static final int CAPACIDAD_COLA = 10;
     public static final int MAX_PLATO = 8;
     public static final int VIDAS_INICIALES = 5;
-    public static final float DURACION_DIA = 110f;
+    public static final float DURACION_DIA = 70f;
 
     private final Random rnd;
     private final ListaDoble<Ingrediente> disponibles = Catalogo.iniciales();
-    private final Queue<Cliente> cola = new PriorityQueue<>();
+    private final ColaPrioridad<Cliente> cola = new ColaPrioridad<>();
     private final Stack<Ingrediente> plato = new Stack<>();
     private Cliente enAtencion;
 
@@ -49,6 +49,13 @@ public class Mundo {
     private String ultimaReceta;       // para no repetir el mismo pedido dos veces seguidas
     private String mensaje = "";
     private float tiempoMensaje = 0f;
+
+    // ---------------------------------------------------------------- clientes VIP
+    private static final int VIP_MINIMO_DIA = 2;        // al menos 2 VIPs por dia
+    private static final float PROBABILIDAD_VIP = 0.15f; // los VIPs son menos frecuentes que los comunes
+    private static final float TIEMPO_MINIMO_VIP = 10f; // segundos que deben pasar antes de que aparezca el primer VIP del dia
+    private int vipsEsteDia = 0;                        // cuantos VIPs se han generado hoy
+    private boolean ultimoFueVIP = false;               // evita que dos VIPs lleguen uno tras otro
 
     public Mundo() { this(System.nanoTime()); }
     public Mundo(long semilla) {
@@ -106,19 +113,41 @@ public class Mundo {
         if (cola.size() >= CAPACIDAD_COLA) {
             perderCliente("Local lleno: un cliente se fue");
         } else {
+            // Los VIPs no aparecen hasta que pasen TIEMPO_MINIMO_VIP segundos del inicio del dia,
+            // y nunca dos seguidos (uno detras del otro).
+            float tiempoTranscurrido = DURACION_DIA - tiempoDia;
+            boolean disponibleVIP = tiempoTranscurrido >= TIEMPO_MINIMO_VIP && !ultimoFueVIP;
             Receta receta = elegirReceta();
-            // Los primeros 2 clientes son normales; del 3ro en adelante pueden llegar VIP
-            boolean esVip = siguienteNumero > 2 && rnd.nextFloat() < 0.37f;
-            cola.offer(new Cliente(siguienteNumero++, receta, paciencia(), Aspecto.aleatorio(rnd), esVip));
-            if (esVip) {
-                avisar("Llego un cliente VIP!");
-            }
+            NivelCliente nivel = disponibleVIP ? decidirNivelVIP() : NivelCliente.COMUN;
+            Aspecto aspecto = (nivel != NivelCliente.COMUN)
+                    ? Aspecto.vip(rnd, nivel)
+                    : Aspecto.aleatorio(rnd);
+            float pacienciaCliente = (nivel != NivelCliente.COMUN) ? paciencia() * 1.25f : paciencia();
+            Cliente c = new Cliente(siguienteNumero++, receta, pacienciaCliente, aspecto, nivel);
+            cola.offer(c);
+            ultimoFueVIP = (nivel != NivelCliente.COMUN);
+            if (nivel != NivelCliente.COMUN) vipsEsteDia++;
         }
+    }
+
+    /** Decide si el próximo cliente es VIP y de qué nivel.
+     *  Los VIPs son menos frecuentes que los comunes, pero se garantiza al menos
+     *  VIP_MINIMO_DIA por día subiendo la probabilidad mientras no se alcance el mínimo. */
+    private NivelCliente decidirNivelVIP() {
+        boolean forzarMinimo = vipsEsteDia < VIP_MINIMO_DIA;
+        boolean esVIP = forzarMinimo
+                ? rnd.nextFloat() < 0.60f
+                : rnd.nextFloat() < PROBABILIDAD_VIP;
+        if (!esVIP) return NivelCliente.COMUN;
+        // Entre los VIPs, la probabilidad de ser Gold varía con el día para que
+        // no sea siempre el mismo nivel: oscila entre ~20% y ~60% de Gold.
+        float probGold = 0.40f + 0.20f * (float) Math.sin(dia * 0.7f);
+        return rnd.nextFloat() < probGold ? NivelCliente.GOLD : NivelCliente.SILVER;
     }
 
     // ---------------------------------------------------------------- acciones del jugador
 
-    /** Saca al de mayor prioridad de la cola (VIP primero, luego orden de llegada) y lo pone en el mostrador. */
+    /** Saca al primero de la cola (el que llegó antes) y lo pone en el mostrador. */
     public boolean atenderSiguiente() {
         if (estado != Estado.JUGANDO) return false;
         if (enAtencion != null) { avisar("Termina primero el pedido actual"); return false; }
@@ -160,6 +189,17 @@ public class Mundo {
             plato.clear();
             return Entrega.CORRECTA;
         }
+        // Pedido incorrecto: si es VIP y hay monedas suficientes, se hace un reembolso
+        // menor al valor de la receta y el cliente no se va enfadado.
+        if (c.esVIP()) {
+            int reembolso = c.pagoBase() / 2;   // la mitad del valor de la receta (menor al pago total)
+            if (monedas >= reembolso && reembolso > 0) {
+                monedas -= reembolso;
+                plato.clear();
+                avisar("Pedido incorrecto (VIP): reembolso de -$" + reembolso);
+                return Entrega.INCORRECTA;
+            }
+        }
         plato.clear();
         perderCliente("Pedido incorrecto: el cliente se fue");
         return Entrega.INCORRECTA;
@@ -179,6 +219,8 @@ public class Mundo {
         dia++;
         tiempoDia = DURACION_DIA;
         relojLlegada = 1f;
+        vipsEsteDia = 0;   // nuevo día: se reinicia el mínimo de VIPs
+        ultimoFueVIP = false; // nuevo día: se puede volver a generar VIPs
         estado = Estado.JUGANDO;
         avisar("Dia " + dia);
         return true;
@@ -208,11 +250,21 @@ public class Mundo {
     public List<Ingrediente> getDisponibles() { return disponibles.aLista(); }
     /** Lista enlazada de la despensa; la pantalla la recorre por nodos para paginar. */
     public ListaDoble<Ingrediente> getDespensa() { return disponibles; }
-    public List<Cliente> getCola() {
-        List<Cliente> ordenada = new ArrayList<>(cola);
-        Collections.sort(ordenada);
-        return ordenada;
-    }   // copia ordenada por prioridad VIP y orden de llegada
+    public List<Cliente> getCola() { return cola.aLista(); }   // copia, ordenada por prioridad del monticulo
+
+    /** Clientes VIP en espera, ordenados por prioridad (para dibujar en fila separada). */
+    public List<Cliente> getColaVIP() {
+        List<Cliente> lista = new ArrayList<>();
+        for (Cliente c : cola.aLista()) if (c.esVIP()) lista.add(c);
+        return lista;
+    }
+
+    /** Clientes comunes en espera, ordenados por prioridad (para dibujar en fila separada). */
+    public List<Cliente> getColaComun() {
+        List<Cliente> lista = new ArrayList<>();
+        for (Cliente c : cola.aLista()) if (!c.esVIP()) lista.add(c);
+        return lista;
+    }
     public List<Ingrediente> getPlato() { return Collections.unmodifiableList(plato); } // en orden de la receta
     public Cliente getEnAtencion() { return enAtencion; }
     public Estado getEstado() { return estado; }
@@ -239,8 +291,8 @@ public class Mundo {
     }
 
     /** Dificultad: cada día llegan más rápido y con menos paciencia. */
-    private float intervaloLlegada() { return Math.max(5f, 12f - 0.8f * (dia - 1)); }
-    private float paciencia() { return Math.max(40f, 80f - 3f * (dia - 1)); }
+    private float intervaloLlegada() { return Math.max(4f, 10f - 0.8f * (dia - 1)); }
+    private float paciencia() { return Math.max(20f, 45f - 4f * (dia - 1)); }
 
     /** Elige una receta del diccionario que se pueda preparar con la despensa actual. */
     private Receta elegirReceta() {
