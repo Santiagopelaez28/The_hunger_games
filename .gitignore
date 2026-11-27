@@ -5,7 +5,6 @@
 # Residuos de compilación de Gradle
 build/
 .gradle/
-.gradle
 
 # Archivos de clase compilados
 *.class

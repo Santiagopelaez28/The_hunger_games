@@ -1,11 +1,12 @@
 package com.foodflow.ui;
 
-import java.util.List;
-
 import com.foodflow.logica.Catalogo;
 import com.foodflow.modelo.Aspecto;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.NivelCliente;
 import com.foodflow.modelo.TipoPlato;
+
+import java.util.List;
 
 /**
  * Dibujos hechos solo con rectángulos y círculos del Pincel: clientes, hamburguesas e iconos de ingredientes.
@@ -265,64 +266,29 @@ public final class Dibujos {
             p.circulo(cx - w * 0.18f, cy + h * 0.05f, w * 0.035f, 0xFFF3D6, 0.8f);
             p.circulo(cx + w * 0.12f, cy - h * 0.06f, w * 0.03f, 0xFFF3D6, 0.7f);
         } else if (ing == Catalogo.SALSA) {
+            // Bote de salsa: tapa, cuello, cuerpo y salsa rebosando por arriba
+            float cuelloW = w * 0.45f;
+            float cuelloH = h * 0.22f;
+            float cuerpoW = w * 0.78f;
+            float cuerpoH = h * 0.62f;
 
-            // CUERPO DE LA BOTELLA
-            p.redondeado(
-                    cx - w * 0.34f,
-                    y + h * 0.08f,
-                    w * 0.68f,
-                    h * 0.62f,
-                    w * 0.16f,
-                    0xC0392B
-            );
-
-            // CUELLO
-            p.redondeado(
-                    cx - w * 0.17f,
-                    y + h * 0.64f,
-                    w * 0.34f,
-                    h * 0.20f,
-                    w * 0.07f,
-                    0xC0392B
-            );
-
-            // TAPA
-            p.redondeado(
-                    cx - w * 0.19f,
-                    y + h * 0.82f,
-                    w * 0.38f,
-                    h * 0.12f,
-                    w * 0.04f,
-                    0x8E2A2A
-            );
-
-            // ETIQUETA
-            p.redondeado(
-                    cx - w * 0.25f,
-                    y + h * 0.27f,
-                    w * 0.50f,
-                    h * 0.28f,
-                    w * 0.05f,
-                    0xFFF3D6
-            );
-
-            // PEQUEÑO TOMATE EN LA ETIQUETA
-            p.circulo(
-                    cx,
-                    y + h * 0.41f,
-                    w * 0.09f,
-                    0xE5484D
-            );
-
-            // BRILLO DE LA BOTELLA
-            p.rect(
-                    cx - w * 0.23f,
-                    y + h * 0.36f,
-                    w * 0.045f,
-                    h * 0.38f,
-                    0xFFFFFF,
-                    0.30f
-            );
+            // Tapa del bote
+            p.redondeado(cx - cuelloW / 2f, cy - h * 0.42f, cuelloW, cuelloH * 0.5f, cuelloH * 0.10f, 0x7A5200);
+            p.redondeado(cx - cuelloW / 2f + cuelloW * 0.06f, cy - h * 0.38f, cuelloW * 0.88f, cuelloH * 0.45f, cuelloH * 0.08f, 0x5A3A1E);
+            // Cuello
+            p.rect(cx - cuelloW / 2f, cy - h * 0.20f, cuelloW, cuelloH * 0.55f, 0xA98A5A);
+            // Cuerpo del bote (cristal traslúcido)
+            p.redondeado(cx - cuerpoW / 2f, cy - h * 0.20f - cuerpoH, cuerpoW, cuerpoH, cuerpoH * 0.10f, 0xFDF6E3, 0.95f);
+            p.redondeado(cx - cuerpoW / 2f + 2f, cy - h * 0.20f - cuerpoH + 2f, cuerpoW - 4f, cuerpoH - 4f, cuerpoH * 0.08f, 0xF5E7C8, 0.7f);
+            // Salsa dentro del bote (relleno rojo)
+            float salsaY = cy - h * 0.20f - cuerpoH + cuerpoH * 0.78f;
+            p.redondeado(cx - cuerpoW / 2f + 4f, salsaY, cuerpoW - 8f, cuerpoH * 0.62f, 3f, 0xC0392B);
+            // Burbujas de la salsa
+            p.circulo(cx - cuerpoW * 0.18f, salsaY + cuerpoH * 0.20f, w * 0.05f, 0xF5A9A9, 0.8f);
+            p.circulo(cx + cuerpoW * 0.12f, salsaY + cuerpoH * 0.35f, w * 0.04f, 0xF5A9A9, 0.75f);
+            // Salpicadura de salsa saliendo por la tapa
+            p.circulo(cx, cy - h * 0.45f, w * 0.08f, 0xC0392B);
+            p.circulo(cx - w * 0.05f, cy - h * 0.40f, w * 0.06f, 0xE5484D, 0.8f);
         } else if (ing == Catalogo.SALCHICHA) {
             p.redondeado(cx - w * 0.45f, cy - h * 0.16f, w * 0.90f, h * 0.32f,
                     h * 0.16f, 0xA8432F);
@@ -1008,6 +974,104 @@ public final class Dibujos {
                     0.07f * s,
                     mezclar(col, 0.70f)
             );
+        }
+    }
+
+    /**
+     * Cliente de cuerpo completo apoyado en yPies. Reutiliza cliente() para el busto
+     * y agrega piernas, brazos, zapatos y sombra para la escena del restaurante.
+     */
+    public static void clienteCompleto(Pincel p, float cx, float yPies, float s, Aspecto a, float animo) {
+        clienteCompleto(p, cx, yPies, s, a, animo, true, true);
+    }
+
+    private static void clienteCompleto(Pincel p, float cx, float yPies, float s, Aspecto a, float animo,
+                                        boolean brazoIzquierdo, boolean brazoDerecho) {
+        int pantalon = Pincel.mezclarRgb(a.getCamisa(), 0x1B1D26, 0.62f);
+        int zapato = 0x2A2320;
+
+        p.elipse(cx, yPies + s * 0.06f, s * 1.18f, s * 0.28f, 0x090502, 0.28f);
+
+        // Piernas y zapatos
+        p.redondeado(cx - s * 0.62f, yPies + s * 0.12f, s * 0.44f, s * 1.05f, s * 0.18f, pantalon);
+        p.redondeado(cx + s * 0.18f, yPies + s * 0.12f, s * 0.44f, s * 1.05f, s * 0.18f, pantalon);
+        p.redondeado(cx - s * 0.70f, yPies, s * 0.58f, s * 0.30f, s * 0.13f, zapato);
+        p.redondeado(cx + s * 0.12f, yPies, s * 0.58f, s * 0.30f, s * 0.13f, zapato);
+
+        cliente(p, cx, yPies + s * 4.10f, s, a, animo);
+
+        // Brazos a los costados, por fuera del torso para que se vean completos.
+        if (brazoIzquierdo) {
+            p.redondeado(cx - s * 1.78f, yPies + s * 1.30f, s * 0.36f, s * 1.18f, s * 0.17f, a.getCamisa());
+            p.circulo(cx - s * 1.60f, yPies + s * 1.24f, s * 0.18f, a.getPiel());
+        }
+        if (brazoDerecho) {
+            p.redondeado(cx + s * 1.42f, yPies + s * 1.30f, s * 0.36f, s * 1.18f, s * 0.17f, a.getCamisa());
+            p.circulo(cx + s * 1.60f, yPies + s * 1.24f, s * 0.18f, a.getPiel());
+        }
+    }
+
+    /**
+     * Corona VIP sobre la cabeza del cliente. Mas grande y brillante para Gold,
+     * un poco mas sobria para Silver. Se dibuja encima del busto del cliente.
+     */
+    public static void coronaVIP(Pincel p, float cx, float cy, float s, NivelCliente nivel) {
+        int color = (nivel == NivelCliente.GOLD) ? DORADO : 0xBFC9D1;
+        float w = 1.7f * s;
+        float h = 0.75f * s;
+        float y = cy - 1.05f * s - h;   // sobre la cabeza
+
+        // Base de la corona
+        p.redondeado(cx - w / 2f, y, w, h * 0.45f, h * 0.10f, color);
+        // Tres picos
+        p.redondeado(cx - w * 0.42f, y - h * 0.45f, w * 0.34f, h * 0.75f, h * 0.08f, color);
+        p.redondeado(cx - w * 0.08f, y - h * 0.70f, w * 0.26f, h * 0.95f, h * 0.08f, color);
+        p.redondeado(cx + w * 0.26f, y - h * 0.45f, w * 0.34f, h * 0.75f, h * 0.08f, color);
+        // Joyas en los picos
+        p.circulo(cx, y - h * 0.55f + h * 0.95f, h * 0.10f, 0xFFFFFF, 0.95f);
+        p.circulo(cx - w * 0.33f, y - h * 0.20f, h * 0.08f, 0xFFFFFF, 0.85f);
+        p.circulo(cx + w * 0.33f, y - h * 0.20f, h * 0.08f, 0xFFFFFF, 0.85f);
+        // Destello para que sea mas llamativo
+        Dibujos.destello(p, cx, y - h * 0.30f, h * 0.50f, color, 0.9f);
+    }
+
+    private static final Aspecto CHEF = new Aspecto(0xF1C27D, 0x3B2416, 0xFFF7E8, 0, 3, 0xFFFFFF);
+
+    /**
+     * Personaje fijo del jugador: chef con gorro, delantal y pañuelo.
+     * 'atendiendo' extiende el brazo hacia el cliente; 'servir' distinto de 0 muestra la bandeja
+     * (positivo con visto bueno, negativo con cruz).
+     */
+    public static void cocinero(Pincel p, float cx, float yPies, float s, boolean atendiendo, float servir) {
+        // Al atender, el brazo derecho se reemplaza por el brazo extendido de abajo.
+        clienteCompleto(p, cx, yPies, s, CHEF, 1f, true, !(atendiendo || servir != 0f));
+        float cy = yPies + s * 4.10f;
+
+        int delantal = 0x2A9D8F;
+        p.redondeado(cx - s * 0.88f, yPies + s * 1.05f, s * 1.76f, s * 1.75f, s * 0.18f, delantal, 1f);
+        p.redondeado(cx - s * 0.42f, yPies + s * 1.45f, s * 0.84f, s * 0.36f, s * 0.08f, 0x247F76, 1f);
+        p.rectRotado(cx - s * 0.34f, cy - s * 1.05f, s * 0.68f, s * 0.10f, 12f, delantal, 1f);
+        p.rectRotado(cx + s * 0.34f, cy - s * 1.05f, s * 0.68f, s * 0.10f, -12f, delantal, 1f);
+        p.circulo(cx, cy - s * 1.48f, s * 0.22f, 0xE5484D, 1f);
+
+        // Gorro de chef (toca el techo: silueta mas alta, estilo logo)
+        p.redondeado(cx - s * 0.92f, cy + s * 0.72f, s * 1.84f, s * 0.34f, s * 0.12f, 0xFFFFFF, 1f);
+        p.circulo(cx - s * 0.52f, cy + s * 1.16f, s * 0.42f, 0xFFFFFF, 1f);
+        p.circulo(cx, cy + s * 1.32f, s * 0.52f, 0xFFFFFF, 1f);
+        p.circulo(cx + s * 0.52f, cy + s * 1.16f, s * 0.42f, 0xFFFFFF, 1f);
+        p.redondeado(cx - s * 0.20f, cy + s * 0.84f, s * 0.40f, s * 0.12f, s * 0.05f,
+                0xE8E2D2, 0.90f);
+
+        if (atendiendo || servir != 0f) {
+            p.redondeado(cx + s * 1.00f, yPies + s * 2.35f, s * 1.15f, s * 0.34f, s * 0.17f,
+                    0xFFF7E8, 1f);
+            p.circulo(cx + s * 2.18f, yPies + s * 2.52f, s * 0.20f, CHEF.getPiel(), 1f);
+            p.elipse(cx + s * 2.18f, yPies + s * 2.76f, s * 0.34f, s * 0.08f, 0xE8E4D8, 1f);
+            if (servir != 0f) {
+                p.circulo(cx + s * 2.18f, yPies + s * 2.88f, s * 0.17f, 0xF2B33D, 0.95f);
+                if (servir > 0f) check(p, cx + s * 2.18f, yPies + s * 2.88f, s * 0.24f, 0x3A2708, 1f);
+                else cruz(p, cx + s * 2.18f, yPies + s * 2.88f, s * 0.20f, 0x7A1D1D, 1f);
+            }
         }
     }
 }

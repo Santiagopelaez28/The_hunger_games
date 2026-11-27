@@ -1,7 +1,5 @@
 package com.foodflow.pantallas;
 
-import java.util.List;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.foodflow.FoodFlowGame;
@@ -10,10 +8,11 @@ import com.foodflow.modelo.Ingrediente;
 import com.foodflow.ui.Dibujos;
 import com.foodflow.ui.Pincel;
 
-/** Entre un dia y otro: se compran ingredientes y vidas. */
+import java.util.List;
+
+/** Entre un dia y otro: se compran ingredientes que se agregan a la lista doble de disponibles. */
 public class TiendaScreen extends PantallaBase {
     private static final float TARJETA_W = 214, TARJETA_H = 84;
-    private static final float VIDA_X = 34, VIDA_Y = 136, VIDA_W = 260, VIDA_H = 56;
     private static final float SIGUIENTE_X = 330, SIGUIENTE_Y = 136, SIGUIENTE_W = 300, SIGUIENTE_H = 56;
     private static final float RECETAS_X = 690, RECETAS_Y = 136, RECETAS_W = 220, RECETAS_H = 56;
 
@@ -26,23 +25,12 @@ public class TiendaScreen extends PantallaBase {
     private static float ty(int i) { return 300 - (i / 4) * 94; }
 
     private void siguienteDia() {
-        if (juego.mundo.siguienteDia()) juego.setScreen(new JuegoScreen(juego));
+        juego.mundo.siguienteDia();
+        juego.setScreen(new JuegoScreen(juego));
     }
 
     private void abrirRecetario() {
         juego.setScreen(new RecetasScreen(juego, RecetasScreen.Origen.TIENDA));
-    }
-
-    private void intentarComprarVida() {
-        Mundo m = juego.mundo;
-        if (m.getVidas() >= Mundo.VIDAS_INICIALES) {
-            aviso = "Ya tienes el maximo de vidas";
-        } else if (m.comprarVida()) {
-            aviso = "Has comprado una vida!";
-        } else {
-            aviso = "No tienes suficientes monedas";
-        }
-        tiempoAviso = 2.4f;
     }
 
     @Override
@@ -53,8 +41,6 @@ public class TiendaScreen extends PantallaBase {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) { siguienteDia(); return; }
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) { abrirRecetario(); return; }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.V)) intentarComprarVida();
-
         if (hayClick()) {
             if (dentro(toque, RECETAS_X, RECETAS_Y, RECETAS_W, RECETAS_H)) {
                 abrirRecetario();
@@ -63,9 +49,6 @@ public class TiendaScreen extends PantallaBase {
             if (dentro(toque, SIGUIENTE_X, SIGUIENTE_Y, SIGUIENTE_W, SIGUIENTE_H)) {
                 siguienteDia();
                 return;
-            }
-            if (dentro(toque, VIDA_X, VIDA_Y, VIDA_W, VIDA_H)) {
-                intentarComprarVida();
             }
             for (int i = 0; i < venta.size(); i++) {
                 if (dentro(toque, tx(i), ty(i), TARJETA_W, TARJETA_H)) {
@@ -76,7 +59,7 @@ public class TiendaScreen extends PantallaBase {
                         aviso = "Te faltan monedas para " + ing.getNombre();
                     }
                     tiempoAviso = 2.4f;
-                    break;
+                    break;   // la lista cambio: se vuelve a leer en el proximo frame
                 }
             }
         }
@@ -87,10 +70,10 @@ public class TiendaScreen extends PantallaBase {
         float t = p.getTiempo();
 
         // ---------------------------------------------------------- fondo
-        p.imagenCubriendo(juego.fondoTienda, 0, 0, 960, 600, 0.5f, 0.35f, 0x2C2233);
-        p.rect(0, 0, 960, 600, 0x1A1020, 0.12f);
-        p.degradadoAlpha(0, 330, 960, 270, 0x120E18, 0f, 0.80f);
-        p.degradadoAlpha(0, 0, 960, 110, 0x120E18, 0.68f, 0f);
+        p.imagenCubriendo(juego.fondoTienda, 0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0.5f, 0.35f, 0x2C2233);
+        p.rect(0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0x1A1020, 0.12f);
+        p.degradadoAlpha(0, 330, FoodFlowGame.ANCHO, 270, 0x120E18, 0f, 0.80f);
+        p.degradadoAlpha(0, 0, FoodFlowGame.ANCHO, 110, 0x120E18, 0.68f, 0f);
         p.halo(480, 540, 210, 0xFFB347, 0.24f + 0.04f * (float) Math.sin(t * 1.6f));
 
         // ---------------------------------------------------------- cabecera
@@ -104,6 +87,7 @@ public class TiendaScreen extends PantallaBase {
         dibujarEstadistica(p, 710, 460, "MONEDAS", "$" + m.getMonedas(), 3, 0xFFD166);
 
         // ---------------------------------------------------------- despensa
+        // Hasta 16 ingredientes en dos filas de 8; la lista doble crece al comprar.
         List<Ingrediente> tienes = m.getDisponibles();
         for (int i = 0; i < tienes.size(); i++) {
             float x = 20 + (i % 8) * 116, y = 422 - (i / 8) * 30;
@@ -124,12 +108,7 @@ public class TiendaScreen extends PantallaBase {
             dibujarOferta(p, m, venta.get(i), tx(i), ty(i));
         }
 
-        // ---------------------------------------------------------- botones de tienda
-        boolean puedeComprarVida = m.getVidas() < Mundo.VIDAS_INICIALES && m.getMonedas() >= m.getCostoVida();
-        p.boton("VIDA +1 ($" + m.getCostoVida() + ")", VIDA_X, VIDA_Y, VIDA_W, VIDA_H,
-                0xE76F6A, puedeComprarVida, false);
-        p.tecla("V", VIDA_X + VIDA_W - 17, VIDA_Y + VIDA_H / 2f);
-
+        // ---------------------------------------------------------- boton siguiente dia
         float pulso = 0.5f + 0.5f * (float) Math.sin(t * 2.8f);
         p.halo(480, SIGUIENTE_Y + SIGUIENTE_H / 2f, 170 + pulso * 8f, 0x6BD66B, 0.16f + 0.10f * pulso);
         p.boton("COMENZAR DIA " + (m.getDia() + 1), SIGUIENTE_X, SIGUIENTE_Y, SIGUIENTE_W, SIGUIENTE_H,
@@ -144,8 +123,8 @@ public class TiendaScreen extends PantallaBase {
             p.panel(480 - ancho / 2f, 94, ancho, 30, 15, 0x16131E, 0xFFC24A, 0.97f);
             p.textoCentrado(aviso, 480, 110, 0xFFF3D6, 0.8f);
         } else {
-            p.textoCentrado("Click en un ingrediente para comprarlo   |   V para comprar una vida   |   ENTER para seguir",
-                    480, 100, 0xB9BED0, 0.66f);
+            p.textoCentrado("Click en un ingrediente para comprarlo   |   R para ver recetas   |   ENTER para seguir",
+                    480, 100, 0xB9BED0, 0.72f);
         }
 
         terminarFrame();
@@ -171,8 +150,7 @@ public class TiendaScreen extends PantallaBase {
     }
 
     private void dibujarOferta(Pincel p, Mundo m, Ingrediente ing, float x, float y) {
-        int costo = m.getCostoIngrediente(ing);
-        boolean puede = m.getMonedas() >= costo;
+        boolean puede = m.getMonedas() >= ing.getCosto();
         boolean hover = puede && p.ratonDentro(x, y, TARJETA_W, TARJETA_H);
         float dy = hover ? 2f : 0f;
 
@@ -194,7 +172,7 @@ public class TiendaScreen extends PantallaBase {
 
         p.redondeado(x + 72, y + dy + 9, 96, 20, 8, puede ? 0xF2B33D : 0xC9B99C, 1f);
         Dibujos.moneda(p, x + 84, y + dy + 18.5f, 7);
-        p.texto("$" + costo, x + 95, y + dy + 23, puede ? 0x3A2708 : 0x7A6A50, 0.68f);
+        p.texto("$" + ing.getCosto(), x + 95, y + dy + 23, puede ? 0x3A2708 : 0x7A6A50, 0.68f);
 
         int colorBoton = puede ? 0x2E7D32 : 0x9A8A70;
         float botonX = x + TARJETA_W - 23, botonY = y + dy + 23;

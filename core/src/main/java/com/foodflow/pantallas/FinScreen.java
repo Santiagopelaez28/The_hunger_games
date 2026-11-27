@@ -34,10 +34,10 @@ public class FinScreen extends PantallaBase {
         float t = p.getTiempo();
 
         // ---------------------------------------------------------- fondo
-        p.imagenCubriendo(juego.fondoFin, 0, 0, 960, 600, 0.5f, 0.35f, 0x201A2B);
-        p.rect(0, 0, 960, 600, 0x140E1E, 0.16f);
-        p.degradadoAlpha(0, 300, 960, 300, 0x0E0A14, 0f, 0.82f);
-        p.degradadoAlpha(0, 0, 960, 120, 0x0E0A14, 0.72f, 0f);
+        p.imagenCubriendo(juego.fondoFin, 0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0.5f, 0.35f, 0x201A2B);
+        p.rect(0, 0, FoodFlowGame.ANCHO, FoodFlowGame.ALTO, 0x140E1E, 0.16f);
+        p.degradadoAlpha(0, 300, FoodFlowGame.ANCHO, 300, 0x0E0A14, 0f, 0.82f);
+        p.degradadoAlpha(0, 0, FoodFlowGame.ANCHO, 120, 0x0E0A14, 0.72f, 0f);
         p.halo(480, 500, 230, 0xE5484D, 0.16f + 0.04f * (float) Math.sin(t * 1.4f));
 
         // chispas flotando
