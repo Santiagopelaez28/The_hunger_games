@@ -37,8 +37,8 @@ public final class Recetario {
 
         receta("Margarita", TipoPlato.PIZZA, Catalogo.MASA, Catalogo.SALSA, Catalogo.QUESO,
                 Catalogo.TOMATE);
-        receta("Cuatro queso", TipoPlato.PIZZA, Catalogo.MASA, Catalogo.SALSA, Catalogo.QUESO,
-                Catalogo.QUESO, Catalogo.QUESO);
+        receta("Cuatro quesos", TipoPlato.PIZZA, Catalogo.MASA, Catalogo.SALSA, Catalogo.QUESO,
+                Catalogo.QUESO, Catalogo.QUESO, Catalogo.QUESO);
         receta("Pizza carne", TipoPlato.PIZZA, Catalogo.MASA, Catalogo.SALSA, Catalogo.QUESO,
                 Catalogo.CARNE);
 

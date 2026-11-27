@@ -1,0 +1,43 @@
+# =============================================================================
+# Java / Gradle
+# =============================================================================
+
+# Residuos de compilación de Gradle
+build/
+.gradle/
+
+# Archivos de clase compilados
+*.class
+
+# Ejecutables y librerías nativas
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Archivos de configuración de IDE (IntelliJ / Eclipse / VS Code)
+.idea/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+.vscode/
+
+# Archivos temporales y de sistema
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# LibGDX específicos
+core/assets/*.gdx
+lwjgl3/assets/*.gdx
+
+# =============================================================================
+# Fin del .gitignore
+# =============================================================================

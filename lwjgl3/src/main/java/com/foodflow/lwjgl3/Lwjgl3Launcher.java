@@ -15,6 +15,7 @@ public class Lwjgl3Launcher {
         config.setResizable(true);
         config.useVsync(true);
         config.setForegroundFPS(60);
+
         new Lwjgl3Application(new FoodFlowGame(), config);
     }
 }

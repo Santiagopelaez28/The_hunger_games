@@ -3,12 +3,16 @@ package com.foodflow.pantallas;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.foodflow.FoodFlowGame;
+import com.foodflow.logica.ArbolAVL;
 import com.foodflow.logica.Mundo;
+import com.foodflow.logica.RegistroPartida;
 import com.foodflow.ui.Dibujos;
 import com.foodflow.ui.Pincel;
 
+import java.util.List;
+
 public class FinScreen extends PantallaBase {
-    private static final float BOTON_X = 320, BOTON_Y = 238, BOTON_W = 320, BOTON_H = 58;
+    private static final float BOTON_X = 320, BOTON_Y = 140, BOTON_W = 320, BOTON_H = 58;
 
     private float espera = 1.0f;   // evita saltarse esta pantalla con un click apurado
 
@@ -61,19 +65,48 @@ public class FinScreen extends PantallaBase {
         }
         p.textoCentrado(frase, 480, 470, 0xFFD166, 0.85f);
 
-        // ---------------------------------------------------------- estadisticas
+        // ---------------------------------------------------------- estadisticas de la partida actual
         dibujarTarjeta(p, 50, 360, "DIAS", String.valueOf(m.getDia()), 0, 0xFFD166);
         dibujarTarjeta(p, 270, 360, "ENTREGADOS", String.valueOf(m.getEntregados()), 1, 0x8EE39B);
         dibujarTarjeta(p, 490, 360, "PERDIDOS", String.valueOf(m.getPerdidos()), 2, 0xFF9A9A);
         dibujarTarjeta(p, 710, 360, "MONEDAS", "$" + m.getMonedas(), 3, 0xFFD166);
+
+        // ---------------------------------------------------------- top 5 mejores partidas (árbol AVL)
+        ArbolAVL arbol = juego.arbolPartidas;
+        List<RegistroPartida> top5 = arbol != null ? arbol.top(5) : List.of();
+
+        float topX = 50f;
+        float topY = 252f;
+        float topW = 860f;
+        float topH = 90f;
+        p.panel(topX, topY, topW, topH, 14, 0x1B1F2E, 0x3E4560, 0.95f);
+        p.texto("TOP 5 MEJORES PARTIDAS", topX + 16, topY + topH - 22, 0xFFD166, 0.6f);
+        p.rect(topX + 16, topY + topH - 20, topW - 32, 1, 0x3E4560, 0.4f);
+
+        if (top5.isEmpty()) {
+            p.textoCentrado("Aún no hay registros de partidas", topX + topW / 2f, topY + topH / 2f, 0x9AA0B4, 0.65f);
+        } else {
+            float filaH = (topH - 34f) / 5f;
+            for (int i = 0; i < top5.size(); i++) {
+                RegistroPartida r = top5.get(i);
+                float fy = topY + topH - 34f - i * filaH - filaH * 0.5f;
+                int colorRank = i == 0 ? 0xF2B33D : (i == 1 ? 0xC0C0C0 : (i == 2 ? 0xCD7F32 : 0xE8E2D2));
+                String medal = i == 0 ? "1." : (i == 1 ? "2." : (i == 2 ? "3." : String.valueOf(i + 1) + "."));
+                p.texto(medal, topX + 22, fy, colorRank, 0.65f);
+                p.texto("Día " + r.dia, topX + 52, fy, 0xFFF3D6, 0.55f);
+                p.texto("Entregados: " + r.entregados, topX + 150, fy, 0x8EE39B, 0.55f);
+                p.texto("Perdidos: " + r.perdidos, topX + 280, fy, 0xFF9A9A, 0.55f);
+                p.texto("Puntaje: " + r.puntaje, topX + 400, fy, 0xFFD166, 0.65f);
+            }
+        }
 
         // ---------------------------------------------------------- volver
         float pulso = 0.5f + 0.5f * (float) Math.sin(t * 3f);
         p.halo(480, BOTON_Y + BOTON_H / 2f, 160 + pulso * 8f, 0xFFC24A, 0.16f + 0.10f * pulso);
         p.boton("VOLVER AL MENU", BOTON_X, BOTON_Y, BOTON_W, BOTON_H, 0xFFC24A, espera <= 0, false);
         p.tecla("ENTER", BOTON_X + BOTON_W - 42, BOTON_Y + BOTON_H / 2f);
-        p.panel(480 - 155, 310, 310, 26, 13, 0x120E18, 0x3E4560, 0.72f);
-        p.textoCentrado("Click en el boton o pulsa ENTER", 480, 324, 0xD8DCEA, 0.75f);
+        p.panel(480 - 155, 108, 310, 26, 13, 0x120E18, 0x3E4560, 0.72f);
+        p.textoCentrado("Click en el boton o pulsa ENTER", 480, 122, 0xD8DCEA, 0.75f);
 
         terminarFrame();
     }

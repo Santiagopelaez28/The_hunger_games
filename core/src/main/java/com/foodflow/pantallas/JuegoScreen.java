@@ -114,8 +114,13 @@ public class JuegoScreen extends PantallaBase {
             }
         }
 
-        if (m.getEstado() == Mundo.Estado.DIA_TERMINADO) { juego.setScreen(new TiendaScreen(juego)); return; }
-        if (m.getEstado() == Mundo.Estado.FIN_JUEGO) { juego.setScreen(new FinScreen(juego)); return; }
+        if (m.getEstado() == Mundo.Estado.MEJORAS) { juego.setScreen(new MejorasScreen(juego)); return; }
+        if (m.getEstado() == Mundo.Estado.DIA_TERMINADO) { juego.setScreen(new MejorasScreen(juego)); return; }
+        if (m.getEstado() == Mundo.Estado.FIN_JUEGO) {
+            juego.registrarPartidaFinalizada();
+            juego.setScreen(new FinScreen(juego));
+            return;
+        }
 
         dibujar(m, dt);
     }
