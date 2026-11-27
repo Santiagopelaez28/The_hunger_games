@@ -8,6 +8,7 @@ import com.foodflow.logica.ListaDoble;
 import com.foodflow.logica.Mundo;
 import com.foodflow.modelo.Cliente;
 import com.foodflow.modelo.Ingrediente;
+import com.foodflow.modelo.NivelCliente;
 import com.foodflow.modelo.TipoPlato;
 import com.foodflow.ui.Dibujos;
 import com.foodflow.ui.Pincel;
@@ -283,7 +284,7 @@ public class JuegoScreen extends PantallaBase {
 
         empezarFrame();
         dibujarFondo(p, t);
-        dibujarCola(p, cola, t);
+        dibujarCola(p, m, t);
         dibujarClienteActivo(p, actual, t);
         dibujarChef(p, actual, t, caminando);
         dibujarMostrador(p, actual, plato, t, salto);
@@ -377,20 +378,41 @@ public class JuegoScreen extends PantallaBase {
         p.textoCentrado("ABIERTO", x + w / 2f, y + h + 10, 0x2E7D32, 0.45f);
     }
 
-    /** Clientes que esperan. Su pedido permanece oculto: solo se ve "..." hasta pasar al mostrador. */
-    private void dibujarCola(Pincel p, List<Cliente> cola, float t) {
-        int n = Math.min(cola.size(), COLA_X.length);
-        if (n == 0) {
-            p.textoCentrado("Sin clientes en espera", 792, 360, 0xE8C9A0, 0.66f);
+    /** Clientes que esperan. Los comunes y los VIPs se dibujan en filas separadas.
+     *  La prioridad solo se usa para decidir a quién atender siguiente.
+     *  Los letreros de fila son permanentes: siempre se ven, con o sin clientes. */
+    private void dibujarCola(Pincel p, Mundo m, float t) {
+        List<Cliente> cola = m.getCola();           // ordenada por prioridad (min-heap)
+        List<Cliente> vips = m.getColaVIP();        // solo VIPs, ordenados por prioridad
+        List<Cliente> comunes = m.getColaComun();   // solo comunes, ordenados por prioridad
+
+        Cliente siguiente = cola.isEmpty() ? null : cola.get(0);
+
+        int nComunes = Math.min(comunes.size(), 5);
+        int nVips = Math.min(vips.size(), 5);
+
+        // ------------------------------------------------ letreros permanentes de fila
+        // Fila de comunes (arriba): letrero sobre la fila en y=318
+        p.redondeado(640, 284, 280, 24, 8, 0x1A120C, 0.85f);
+        p.textoCentrado("COMUNES", 780, 296, 0xBFAE86, 0.55f);
+        // Fila de VIP (abajo): letrero sobre la fila en y=388
+        p.redondeado(640, 362, 280, 24, 8, 0x1A120C, 0.85f);
+        p.textoCentrado("VIP", 780, 374, 0xF2B33D, 0.6f);
+
+        if (nComunes == 0 && nVips == 0) {
+            p.textoCentrado("Sin clientes en espera", 792, 350, 0xE8C9A0, 0.66f);
             return;
         }
-        for (int i = n - 1; i >= 0; i--) {
-            Cliente c = cola.get(i);
-            float x = COLA_X[i], y = COLA_Y[i], s = COLA_S[i];
+
+        // ------------------------------------------------ fila de comunes (arriba, y=318)
+        for (int i = 0; i < nComunes; i++) {
+            Cliente c = comunes.get(i);
+            float x = COLA_X[i], y = COLA_Y[0], s = COLA_S[0];
             float pac = c.fraccionPaciencia();
             float bob = (float) Math.sin(t * 3f + i * 0.9f) * 1.2f;
 
-            if (i == 0) {
+            boolean esSiguiente = (siguiente != null && siguiente.getNumero() == c.getNumero());
+            if (esSiguiente) {
                 p.halo(x, y + s * 2.4f, s * 2.6f, 0xFFC24A,
                         0.10f + 0.05f * (float) Math.sin(t * 3f));
             }
@@ -401,25 +423,59 @@ public class JuegoScreen extends PantallaBase {
 
             Dibujos.clienteCompleto(p, x, y + bob, s * 0.85f, c.getAspecto(), pac);
             float gy = y + s * 5.15f + 10f;
-            dibujarGloboEspera(p, x, gy, pac);
+            dibujarGloboEspera(p, x, gy, pac, c.getNivel());
             Dibujos.barra(p, x - 17f, y - 7f, 34f, 4f, pac);
-            if (i == 0) {
+            if (esSiguiente) {
+                p.redondeado(x - 30, y - 25, 60, 14, 5, 0x1A120C, 0.70f);
+                p.textoCentrado("SIGUIENTE", x, y - 15f, 0xFFD166, 0.46f);
+            }
+        }
+
+        // ------------------------------------------------ fila de VIPs (abajo, y=388)
+        for (int i = 0; i < nVips; i++) {
+            Cliente c = vips.get(i);
+            float x = COLA_X[i], y = COLA_Y[5], s = COLA_S[5];
+            float pac = c.fraccionPaciencia();
+            float bob = (float) Math.sin(t * 3f + i * 0.9f) * 1.2f;
+
+            boolean esSiguiente = (siguiente != null && siguiente.getNumero() == c.getNumero());
+            if (esSiguiente) {
+                p.halo(x, y + s * 2.4f, s * 2.6f, 0xFFC24A,
+                        0.10f + 0.05f * (float) Math.sin(t * 3f));
+            }
+            if (pac < 0.25f) {
+                p.halo(x, y + s * 2.4f, s * 2.8f, 0xFF6B6B,
+                        0.12f + 0.08f * (float) Math.sin(t * 8f));
+            }
+
+            Dibujos.clienteCompleto(p, x, y + bob, s * 0.85f, c.getAspecto(), pac);
+            Dibujos.coronaVIP(p, x, y + s * 3.6f, s * 0.9f, c.getNivel());
+            p.textoCentrado(c.getNivel().etiqueta, x, y - 22f, c.getNivel().colorGlobo, 0.42f);
+            float gy = y + s * 5.15f + 10f;
+            dibujarGloboEspera(p, x, gy, pac, c.getNivel());
+            Dibujos.barra(p, x - 17f, y - 7f, 34f, 4f, pac);
+            if (esSiguiente) {
                 p.redondeado(x - 30, y - 25, 60, 14, 5, 0x1A120C, 0.70f);
                 p.textoCentrado("SIGUIENTE", x, y - 15f, 0xFFD166, 0.46f);
             }
         }
     }
 
-    private void dibujarGloboEspera(Pincel p, float x, float y, float pac) {
+    private void dibujarGloboEspera(Pincel p, float x, float y, float pac, NivelCliente nivel) {
         boolean urgente = pac < 0.25f;
         int nube = urgente ? 0xFFE3E3 : 0xFFFFFF;
+        int borde = nivel.colorGlobo;
         p.circulo(x - 8, y, 6, nube, 0.95f);
         p.circulo(x, y + 2, 7, nube, 0.95f);
         p.circulo(x + 8, y, 6, nube, 0.95f);
         p.circulo(x - 14, y - 7, 2.5f, nube, 0.90f);
         p.circulo(x - 18, y - 11, 1.6f, nube, 0.85f);
+        // Borde del globo segun el nivel VIP
+        p.circulo(x, y + 2, 7, borde, 0.55f);
         if (urgente) {
             p.textoCentrado("!", x, y + 2, 0xE5484D, 0.65f);
+        } else if (nivel.esVIP()) {
+            p.textoCentrado("V", x, y + 2, borde, 0.70f);
         } else {
             p.circulo(x - 4, y + 1, 1.2f, 0x6A6A78, 0.90f);
             p.circulo(x, y + 2, 1.2f, 0x6A6A78, 0.90f);
@@ -434,6 +490,11 @@ public class JuegoScreen extends PantallaBase {
         p.halo(clienteX, CLIENTE_PIES + 46, 105,
                 pac < 0.25f ? 0xFF6B6B : 0xFFC24A, 0.12f);
         Dibujos.clienteCompleto(p, clienteX, CLIENTE_PIES + bob, CLIENTE_S, actual.getAspecto(), pac);
+        if (actual.esVIP()) {
+            Dibujos.coronaVIP(p, clienteX, CLIENTE_PIES + bob + CLIENTE_S * 3.4f, CLIENTE_S, actual.getNivel());
+            p.textoCentrado(actual.getNivel().etiqueta, clienteX, CLIENTE_PIES + bob - 4f,
+                    actual.getNivel().colorGlobo, 0.5f);
+        }
     }
 
     /** Chef fijo del jugador: se desplaza por detras del mostrador y extiende el brazo al atender. */
@@ -521,18 +582,28 @@ public class JuegoScreen extends PantallaBase {
         float x = BURBUJA_X, w = BURBUJA_W, h = BURBUJA_H;
         float y = BURBUJA_Y + (1f - pop) * 10f;
         float pac = c.fraccionPaciencia();
-        int borde = pac < 0.25f ? 0xFF6B6B : 0xFFC24A;
+        int borde = c.esVIP() ? c.getNivel().colorGlobo : (pac < 0.25f ? 0xFF6B6B : 0xFFC24A);
 
         p.rectRotado(CLIENTE_X, y + 5f, 20, 20, 45, borde, 1f);
         p.panel(x, y, w, h, 18, 0xFFF7E6, borde, 0.98f);
         p.rectRotado(CLIENTE_X, y + 7f, 14, 14, 45, 0xFFF7E6, 1f);
 
-        p.texto("PEDIDO #" + c.getNumero(), x + 18, y + h - 12, 0x8A6A42, 0.55f);
+        p.texto("PEDIDO #" + c.getNumero(), x + 18, y + h - 14, 0x8A6A42, 0.55f);
+
+        // Etiqueta del nivel VIP dentro del globo (con su color característico),
+        // colocada debajo del número de pedido para no superponerse.
+        if (c.esVIP()) {
+            String vipTexto = c.getNivel().etiqueta;
+            float vw = p.anchoTexto(vipTexto, 0.5f) + 14;
+            p.redondeado(x + 16, y + h - 44, vw, 16, 6, c.getNivel().colorGlobo, 1f);
+            p.textoCentrado(vipTexto, x + 16 + vw / 2f, y + h - 36, 0x1A120C, 0.50f);
+        }
+
         String tipo = c.getTipoPlato().getEtiqueta().toUpperCase();
         float tw = p.anchoTexto(tipo, 0.5f) + 18;
         p.redondeado(x + w - 18 - tw, y + h - 28, tw, 16, 6, 0xF2B33D, 1f);
         p.textoCentrado(tipo, x + w - 18 - tw / 2f, y + h - 20, 0x3A2708, 0.50f);
-        p.texto(c.getNombreReceta(), x + 18, y + h - 31, 0x3A2708, 0.92f);
+        p.texto(c.getNombreReceta(), x + 18, y + h - 58, 0x3A2708, 0.92f);
 
         // Solo nombre e imagen del plato: los ingredientes quedan en el recetario.
         Dibujos.plato(p, c.getTipoPlato(), x + w / 2f, y + 30, 96, 56, c.getReceta());
