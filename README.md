@@ -1,10 +1,6 @@
 # The hunger games
 
-Eres el chef fijo de un restaurante 2D con vista tipo Pokémon. Atiendes a los
-clientes que esperan en una cola de hasta 10 personas, preparas su pedido y
-compras ingredientes nuevos entre un día y otro. El pedido permanece oculto
-hasta que el cliente llega al mostrador: entonces aparece un globo con el
-nombre de la receta y sus ingredientes en orden.
+The hunger games es un videojuego / simulador interactivo en el que el jugador tendrá la posibilidad de preparar las recetas solicitadas por los clientes, el jugador tiene la posibilidad de buscar las diferentes recetas en el recetario del juego y prepararlas acorde a sus ingredientes, cada cliente tiene un limite de paciencia, si el jugador realiza mal una receta o el cliente se va, pierde una de las cinco vidas disponibles; el juego permite al jugador incorporar mejoras al restaurante y comprar más ingredientes para ampliar su catalogo y desbloquear más posibles recetas.
 
 ## Cómo ejecutarlo
 
@@ -32,16 +28,22 @@ cliente pase al mostrador y revele su pedido.
 
 | Estructura                  | Uso en el juego                                                            |
 |-----------------------------|----------------------------------------------------------------------------|
-| `Queue<Cliente>` (LinkedList)   | Clientes en orden de llegada (FIFO), con capacidad para 10. Cola llena o paciencia agotada: se van. |
+| `ColaPrioridad<Cliente>` (min-heap) | Cola de clientes ordenada por prioridad: VIP Gold (1), VIP Silver (2), Común (3). El montículo compara prioridades y el cliente con mayor prioridad (valor más bajo) se atiende primero. Capacidad 10. |
 | `Stack<Ingrediente>`            | Plato en construcción (LIFO). `deshacer()` quita el último ingrediente.      |
 | `ListaDoble<Ingrediente>`       | Ingredientes disponibles; cada nodo enlaza al anterior y al siguiente. Crece al comprar y permite paginar los botones. |
+| `ArbolAVL<RegistroPartida>`     | Historial de partidas finalizadas. Inserta registros ordenados por puntaje descendente y devuelve el Top 5 (mayor puntaje primero, desempate por día mayor). Se muestra en `FinScreen`. |
 | `Map<String, Receta>` (LinkedHashMap en `Recetario`) | Diccionario de recetas: el nombre es la clave y la `Receta` (tipo de plato + ingredientes en orden) es el valor. El globo del cliente en el mostrador muestra solo el nombre y la imagen de la receta; los ingredientes se consultan en el recetario. |
 
-`ListaDoble` es propia (`logica/ListaDoble.java`); las demás son estructuras de `java.util`.
+`ColaPrioridad`, `ArbolAVL` y `ListaDoble` son propias (`logica/`); las demás son estructuras de `java.util`.
 
 ## Organización
 
 - `modelo/` y `logica/`: reglas del juego. No usan LibGDX, se pueden probar sin abrir ventana.
+  - `modelo/Cliente`, `modelo/NivelCliente`: datos del cliente y su nivel VIP.
+  - `modelo/Aspecto`: cómo se ve cada cliente (piel, pelo, peinado, camisa, accesorio). Incluye `Aspecto.vip()` para clientes VIP.
+  - `logica/Mundo`: constantes de dificultad, lógica de llegada de clientes (VIP y comunes) y entrega de pedidos.
+  - `logica/ColaPrioridad`: montículo min-heap para la cola de clientes por prioridad VIP.
+  - `logica/RegistroPartida` y `logica/ArbolAVL`: historial y Top 5 de mejores partidas.
 - `pantallas/`: Menú, Juego, Tienda, Recetas y Fin. `ui/Pincel`: dibuja rectángulos, círculos y texto.
 - `ui/Dibujos`: dibuja los clientes, las hamburguesas (capa por capa), las pizzas, los hotdogs y los iconos de ingredientes.
 - `modelo/Aspecto`: cómo se ve cada cliente (piel, pelo, peinado, camisa, accesorio). Se sortea al llegar.
@@ -80,6 +82,31 @@ Para agregar una receta, añade una línea `receta("Nombre", TipoPlato.PIZZA, Ca
 el bloque estático de `Recetario`. Para agregar un ingrediente nuevo, agrégalo en `Catalogo` y
 dibújalo en `Dibujos.icono` (y en `Dibujos.capa` si también puede ir en una hamburguesa). Para un
 tipo de plato nuevo, agrégalo a `TipoPlato` y dibújalo en `Dibujos.plato`.
+
+## Sistema VIP y colas separadas
+
+Cuando un cliente llega, puede ser:
+- **Común** (prioridad 3): aspecto aleatorio normal, globo blanco.
+- **VIP Silver** (prioridad 2): aspecto llamativo en tonos plateados, globo con borde plata.
+- **VIP Gold** (prioridad 1): aspecto llamativo en tonos dorados, globo con borde dorado y corona sobre la cabeza.
+
+Reglas de los clientes VIP:
+- Son **menos frecuentes** que los comunes (15 % de probabilidad base).
+- Se garantiza **al menos 2 VIPs por día** (subiendo la probabilidad mientras no se alcance el mínimo).
+- No aparecen hasta pasados **10 segundos** de iniciado el día.
+- Nunca llegan dos VIPs uno tras otro (el siguiente siempre es común).
+- Tienen **25 % más de paciencia** que los comunes.
+- En la zona de espera se dibujan en **dos filas separadas**: comunes arriba y VIPs abajo. La prioridad solo se usa para decidir a quién atender siguiente, no para el orden visual de dibujo.
+- Si un VIP recibe un pedido **incorrecto** y el jugador tiene monedas suficientes, se hace un **reembolso de la mitad del valor de la receta** y el cliente no se va enfadado.
+
+## Top 5 mejores partidas (árbol AVL)
+
+Al terminar una partida (pantalla `FIN_JUEGO`), las estadísticas se guardan en un **árbol AVL** (`logica/ArbolAVL.java`) como un `RegistroPartida` con:
+- Día alcanzado
+- Entregados, perdidos y monedas
+- Puntaje = `100 × entregados + 300 × (día − 1)`
+
+El árbol se ordena por **puntaje descendente** (mayor primero); si hay empate, gana el que llegó a un día mayor. En `FinScreen` se muestra el **Top 5** recorriendo el árbol en orden (derecha, nodo, izquierda) y deteniéndose en el quinto registro. Cada registro muestra día, entregados, perdidos y puntaje, con medalla de posición (1.º dorado, 2.º plateado, 3.º bronce).
 
 ## Imágenes (carpeta `assets/`)
 
