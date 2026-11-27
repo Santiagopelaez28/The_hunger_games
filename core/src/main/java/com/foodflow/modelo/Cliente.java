@@ -3,21 +3,23 @@ package com.foodflow.modelo;
 import java.util.List;
 
 /** Cliente que espera en la cola. La receta se arma en el orden en que aparece en la lista. */
-public class Cliente {
+public class Cliente implements Comparable<Cliente> {
     private final int numero;
     private final String nombreReceta;
     private final TipoPlato tipoPlato;
     private final List<Ingrediente> receta;
     private final Aspecto aspecto;
+    private final NivelCliente nivel;
     private final float pacienciaMax;
     private float restante;
 
-    public Cliente(int numero, Receta receta, float paciencia, Aspecto aspecto) {
+    public Cliente(int numero, Receta receta, float paciencia, Aspecto aspecto, NivelCliente nivel) {
         this.numero = numero;
         this.nombreReceta = receta.getNombre();
         this.tipoPlato = receta.getTipo();
         this.receta = receta.getIngredientes();
         this.aspecto = aspecto;
+        this.nivel = nivel;
         this.pacienciaMax = paciencia;
         this.restante = paciencia;
     }
@@ -27,6 +29,8 @@ public class Cliente {
     public TipoPlato getTipoPlato() { return tipoPlato; }
     public List<Ingrediente> getReceta() { return receta; }
     public Aspecto getAspecto() { return aspecto; }
+    public NivelCliente getNivel() { return nivel; }
+    public boolean esVIP() { return nivel.esVIP(); }
 
     public void esperar(float dt) { restante -= dt; }
     public boolean agotado() { return restante <= 0; }
@@ -37,5 +41,16 @@ public class Cliente {
         int total = 0;
         for (Ingrediente i : receta) total += i.getValor();
         return total;
+    }
+
+    /**
+     * Compara por prioridad de nivel (menor = mas prioritario).
+     * Empate: el que tiene menor numero (llegó antes) sale primero (FIFO dentro del mismo nivel).
+     */
+    @Override
+    public int compareTo(Cliente otro) {
+        int cmp = Integer.compare(this.nivel.prioridad, otro.nivel.prioridad);
+        if (cmp != 0) return cmp;
+        return Integer.compare(this.numero, otro.numero);
     }
 }
